@@ -19,8 +19,11 @@ public class UserREST implements Serializable {
 	public String name;
 	public String vorname;
 	public String email;
+	public String facebookUser;
 	public String facebookToken;
 	public VereinREST verein;
 	public boolean active;
 	public LoginTokenREST loginToken;
+	public boolean weeklyStatusMail;
+	public boolean terminReminderMail;
 }

@@ -10,13 +10,16 @@ import org.jboss.as.quickstarts.kitchensink.model.LoginToken;
 import org.jboss.as.quickstarts.kitchensink.model.Ort;
 import org.jboss.as.quickstarts.kitchensink.model.Serie;
 import org.jboss.as.quickstarts.kitchensink.model.Team;
+import org.jboss.as.quickstarts.kitchensink.model.TeamMailSettings;
 import org.jboss.as.quickstarts.kitchensink.model.TeamRolle;
+import org.jboss.as.quickstarts.kitchensink.model.TeamSettings;
 import org.jboss.as.quickstarts.kitchensink.model.Termin;
 import org.jboss.as.quickstarts.kitchensink.model.TerminVorlage;
 import org.jboss.as.quickstarts.kitchensink.model.User;
 import org.jboss.as.quickstarts.kitchensink.model.UserSettings;
 import org.jboss.as.quickstarts.kitchensink.model.Verein;
 import org.jboss.as.quickstarts.kitchensink.model.Zusage;
+import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
 import org.jboss.as.quickstarts.kitchensink.wrapper.EinladungREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.LoginTokenREST;
@@ -24,8 +27,10 @@ import org.jboss.as.quickstarts.kitchensink.wrapper.OrtREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.SerieREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.SpielerZusageREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.TeamListREST;
+import org.jboss.as.quickstarts.kitchensink.wrapper.TeamMailSettingsREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.TeamMitgliedREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.TeamREST;
+import org.jboss.as.quickstarts.kitchensink.wrapper.TeamSettingsREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.TeamZusageREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.TerminREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.TerminSettingsREST;
@@ -34,18 +39,24 @@ import org.jboss.as.quickstarts.kitchensink.wrapper.TrainerZusageREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.UserREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.UserSettingsREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.UserZusageREST;
+import org.jboss.as.quickstarts.kitchensink.wrapper.VereinAdminREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.VereinREST;
 
 public class WrapperUtil {
 	public static UserREST createLoginRest(User user, LoginToken loginToken){
 		UserREST rest = new UserREST();
-		rest.id = user.getId();
+		rest.id = loginToken.getToken();
 		rest.admin = user.isAdmin();
 		rest.email = user.getEmail();
+		rest.facebookUser = user.getFacebookUserId();
 		rest.facebookToken = user.getFacebookToken();
 		rest.name = user.getName();
 		rest.vorname = user.getVorname();
-		rest.verein = createLoginRest(user.getVerein(), user);
+		rest.weeklyStatusMail = user.isWeeklyStatusMail();
+		rest.terminReminderMail = user.isTerminReminderMail();
+		if(user.getVerein() != null){
+			rest.verein = createLoginRest(user.getVerein(), user);
+		}
 		if(loginToken != null){
 			rest.loginToken = createRest(loginToken);
 		}
@@ -62,6 +73,7 @@ public class WrapperUtil {
 			teams.add(team);
 		}
 		rest.teams = teams;
+		rest.gekaufteTeams = verein.getGekaufteTeams();
 		return rest;
 	}
 	
@@ -86,6 +98,7 @@ public class WrapperUtil {
 		rest.terminSettings.maybeAllowed = termin.isMaybeAllowed();
 		rest.teamZusagen = createRest();
 		rest.teamId = termin.getTeam().getId();
+		rest.teamName = termin.getTeam().getName();
 		if(termin.getOrt() != null){
 			rest.ort = createRest(termin.getOrt());
 		}
@@ -121,6 +134,7 @@ public class WrapperUtil {
 
 	public static void createZusagen(String userId, TerminREST rest, Team team, Zusage zusage, User user,
 			int frequency) {
+		TeamSettings teamSettings = team.getTeamSettings();
 		for(TeamRolle rolle : user.getRollen()){
 			if(rolle.getTeam().getId().equals(team.getId())){
 				if(userId.equals(user.getId())){
@@ -129,24 +143,32 @@ public class WrapperUtil {
 					userZusage.kommentar = zusage.getKommentar();
 					userZusage.rolle = rolle.getRolle();
 					userZusage.displayName = user.getVorname();
+					userZusage.autoSet = zusage.isAutoSet();
 					rest.userZusage = userZusage;
+					if(rolle.getRolle().equals(Constants.TRAINER_ROLE) && !teamSettings.isTrainerMussZusagen()){
+						rest.userZusage = null;
+					}
 				} else{
 					if(rolle.getRolle().equals(Rolle.TRAINER)){
-						TrainerZusageREST trainerZusage = new TrainerZusageREST();
-						trainerZusage.rolle = rolle.getRolle();
-						trainerZusage.status = zusage.getStatus();
-						trainerZusage.kommentar = zusage.getKommentar();
-						if(frequency > 1){
-							trainerZusage.displayName = user.getVorname() + " " +user.getName();
-						} else{
-							trainerZusage.displayName = user.getVorname();
+						if(teamSettings.isTrainerMussZusagen()){
+							TrainerZusageREST trainerZusage = new TrainerZusageREST();
+							trainerZusage.rolle = rolle.getRolle();
+							trainerZusage.status = zusage.getStatus();
+							trainerZusage.kommentar = zusage.getKommentar();
+							trainerZusage.autoSet = zusage.isAutoSet();
+							if(frequency > 1){
+								trainerZusage.displayName = user.getVorname() + " " +user.getName();
+							} else{
+								trainerZusage.displayName = user.getVorname();
+							}
+							rest.teamZusagen.trainerZusagen.add(trainerZusage);
 						}
-						rest.teamZusagen.trainerZusagen.add(trainerZusage);
 					} else if(rolle.getRolle().equals(Rolle.SPIELER)){
 						SpielerZusageREST spielerZusage = new SpielerZusageREST();
 						spielerZusage.rolle = rolle.getRolle();
 						spielerZusage.status = zusage.getStatus();
 						spielerZusage.kommentar = zusage.getKommentar();
+						spielerZusage.autoSet = zusage.isAutoSet();
 						if(frequency > 1){
 							spielerZusage.displayName = user.getVorname() + " " +user.getName();
 						} else{
@@ -174,6 +196,48 @@ public class WrapperUtil {
 		return rest;
 	}
 	
+	public static VereinREST createRest(Verein verein){
+		VereinREST rest = new VereinREST();
+		rest.name = verein.getName();
+		rest.id = verein.getId();
+		rest.teams = new ArrayList<TeamREST>(verein.getVereinsTeams().size());
+		for(Team team : verein.getVereinsTeams()){
+			rest.teams.add(createRest(team));
+		}
+		rest.gekaufteTeams = verein.getGekaufteTeams();
+		return rest;
+	}
+	
+	public static VereinAdminREST createAdminRest(Verein verein){
+		VereinAdminREST rest = new VereinAdminREST();
+		rest.name = verein.getName();
+		rest.id = verein.getId();
+		rest.teams = new ArrayList<TeamListREST>(verein.getVereinsTeams().size());
+		for(Team team : verein.getVereinsTeams()){
+			TeamListREST teamRest = createTeamListRest(team, null, team.getEinladungen());
+			List<TeamMitgliedREST> mitglieder = new ArrayList<TeamMitgliedREST>();
+			for(TeamRolle teamUserRolle : team.getRollen()){
+				if(teamUserRolle.getRolle().equals(Constants.TRAINER_ROLE)){
+					TeamMitgliedREST mitgliedRest = new TeamMitgliedREST();
+					mitgliedRest.rolle = teamUserRolle.getRolle();
+					mitgliedRest.user = createListRest(teamUserRolle.getUser());
+					mitglieder.add(mitgliedRest);
+				}
+			}
+			teamRest.mitglieder = mitglieder;
+			rest.teams.add(teamRest);
+		}
+		rest.gekaufteTeams = verein.getGekaufteTeams();
+		return rest;
+	}
+	
+	public static TeamREST createRest(Team team){
+		TeamREST rest = new TeamREST();
+		rest.id = team.getId();
+		rest.name = team.getName();
+		return rest;
+	}
+	
 	public static SerieREST createRest(Serie serie){
 		SerieREST rest = new SerieREST();
 		rest.intervall = serie.getIntervall();
@@ -189,12 +253,16 @@ public class WrapperUtil {
 	
 	public static TeamListREST createTeamListRest(Team team, User user, List<Einladung> einladungen){
 		TeamListREST rest = new TeamListREST();
+		rest.name = team.getName();
+		rest.id = team.getId();
 		rest.mitglieder = new ArrayList<TeamMitgliedREST>();
+		rest.spielerAnzahl = Helper.getRollenCountInTeam(team, Constants.SPIELER_ROLE);
+		rest.trainerAnzahl = Helper.getRollenCountInTeam(team, Constants.TRAINER_ROLE);
 		for(TeamRolle rolle : team.getRollen()){
 			TeamMitgliedREST userRest = new TeamMitgliedREST();
 			userRest.rolle = rolle.getRolle();
 			userRest.user = createListRest(rolle.getUser());
-			if(rolle.getUser().getId().equals(user.getId())){
+			if(user != null && rolle.getUser().getId().equals(user.getId())){
 				rest.user = userRest;
 			} else{
 				rest.mitglieder.add(userRest);
@@ -224,7 +292,7 @@ public class WrapperUtil {
 		rest.id = user.getId();
 		rest.admin = user.isAdmin();
 		rest.email = user.getEmail();
-		rest.facebookToken = user.getFacebookToken();
+		rest.facebookUser = user.getFacebookUserId();
 		rest.name = user.getName();
 		rest.vorname = user.getVorname();
 		rest.active = user.isAktiviert();
@@ -268,4 +336,18 @@ public class WrapperUtil {
 		}
 	}
 	
+	public static TeamMailSettingsREST createRest(TeamMailSettings teamMailSettings){
+		TeamMailSettingsREST rest = new TeamMailSettingsREST();
+		rest.hoursBeforeTrainerReminder = teamMailSettings.getHoursBeforeTrainerReminder();
+		rest.mailText = teamMailSettings.getMailText();
+		rest.showIntroduction = teamMailSettings.isShowIntroduction();
+		rest.showMailText = teamMailSettings.isShowMailText();
+		return rest;
+	}
+	
+	public static TeamSettingsREST createRest(TeamSettings teamSettings){
+		TeamSettingsREST rest = new TeamSettingsREST();
+		rest.trainerMussZusagen = teamSettings.isTrainerMussZusagen();
+		return rest;
+	}
 }

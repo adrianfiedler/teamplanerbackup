@@ -1,22 +1,33 @@
 package org.jboss.as.quickstarts.kitchensink.util;
 
-import org.jasypt.util.text.BasicTextEncryptor;
+import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
+import org.jasypt.salt.SaltGenerator;
+import org.jasypt.salt.StringFixedSaltGenerator;
 
 public class CipherUtil {
 	
 	private static final String myEncryptionPassword = "e83bbc86-98b6-4ae5-89df-e7b30cbe62ac";
+	private static final String mySalt = "3753af4e-8160-45ba-a21f-85760cf1aece";
 	
 	public static String encrypt(String myText){
-		BasicTextEncryptor textEncryptor = new BasicTextEncryptor();
-		textEncryptor.setPassword(myEncryptionPassword);
-		String myEncryptedText = textEncryptor.encrypt(myText);
+		StandardPBEStringEncryptor encryptor = new StandardPBEStringEncryptor();
+        encryptor.setAlgorithm("PBEWithMD5AndDES");
+		encryptor.setPassword(myEncryptionPassword);
+		SaltGenerator saltGenerator = new StringFixedSaltGenerator(mySalt);
+		encryptor.setSaltGenerator(saltGenerator);
+
+		String myEncryptedText = encryptor.encrypt(myText);
 		return myEncryptedText;
 	}
 	
 	public static String decrypt(String myEncryptedText){
-		BasicTextEncryptor textEncryptor = new BasicTextEncryptor();
-		textEncryptor.setPassword(myEncryptionPassword);
-		String plainText = textEncryptor.decrypt(myEncryptedText);
-		return plainText;
+		StandardPBEStringEncryptor decryptor = new StandardPBEStringEncryptor();
+        decryptor.setAlgorithm("PBEWithMD5AndDES");
+		decryptor.setPassword(myEncryptionPassword);
+		SaltGenerator saltGenerator = new StringFixedSaltGenerator(mySalt);
+		decryptor.setSaltGenerator(saltGenerator);
+
+		String myDecryptedText = decryptor.decrypt(myEncryptedText);
+		return myDecryptedText;
 	}
 }

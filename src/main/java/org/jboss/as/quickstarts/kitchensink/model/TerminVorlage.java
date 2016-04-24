@@ -19,7 +19,6 @@ package org.jboss.as.quickstarts.kitchensink.model;
 import java.io.Serializable;
 import java.util.Date;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -37,13 +36,13 @@ public class TerminVorlage extends AbstractBaseEntity implements Serializable {
 
     private String beschreibung;
     
-    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.ALL})
+    @ManyToOne(fetch=FetchType.EAGER)
     @JoinColumn(name = "ort_ref")
     private Ort ort;
     
     private Date time;
     
-    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.ALL})
+    @ManyToOne(fetch=FetchType.EAGER)
     @JoinColumn(name = "team_ref")
     private Team team;
     

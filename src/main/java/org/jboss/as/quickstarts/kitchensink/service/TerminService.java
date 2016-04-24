@@ -40,7 +40,7 @@ import org.jboss.as.quickstarts.kitchensink.model.User;
 import org.jboss.as.quickstarts.kitchensink.model.User_;
 import org.jboss.as.quickstarts.kitchensink.model.Zusage;
 import org.jboss.as.quickstarts.kitchensink.model.Zusage_;
-import org.jboss.as.quickstarts.kitchensink.wrapper.TerminRequestREST;
+import org.jboss.as.quickstarts.kitchensink.wrapper.request.TerminRequestREST;
 
 // The @Stateless annotation eliminates the need for manual transaction demarcation
 @Stateless
@@ -52,19 +52,19 @@ public class TerminService {
 	@Inject
 	private EntityManager em;
 
-	public Termin save(Termin Termin) throws Exception {
+	public Termin save(Termin Termin){
 		return em.merge(Termin);
 	}
 
-	public TerminVorlage saveVorlage(TerminVorlage terminVorlage) throws Exception {
+	public TerminVorlage saveVorlage(TerminVorlage terminVorlage){
 		return em.merge(terminVorlage);
 	}
 
-	public Serie saveSerie(Serie serie) throws Exception {
+	public Serie saveSerie(Serie serie){
 		return em.merge(serie);
 	}
 	
-    public void delete(Termin termin) throws Exception {
+    public void delete(Termin termin) {
     	em.remove(termin);
     }
 
@@ -143,7 +143,7 @@ public class TerminService {
 						team.get(Team_.id).in(teamIds), 
 						cb.between(termin.get(Termin_.datum), startDate, endDate),
 						cb.notEqual(termin.get(Termin_.status), "2")
-				));
+				)).orderBy(cb.asc(termin.get(Termin_.datum)));
 		return em.createQuery(criteria).getResultList();
 	}
 	
@@ -197,7 +197,8 @@ public class TerminService {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<TerminVorlage> criteria = cb.createQuery(TerminVorlage.class);
 		Root<TerminVorlage> terminVorlage = criteria.from(TerminVorlage.class);
-		criteria.select(terminVorlage).orderBy(cb.asc(terminVorlage.get(TerminVorlage_.name)));
+		Join<TerminVorlage, Team> team = terminVorlage.join(TerminVorlage_.team);
+		criteria.select(terminVorlage).where(cb.equal(team.get(Team_.id), teamId)).orderBy(cb.asc(terminVorlage.get(TerminVorlage_.name)));
 		return em.createQuery(criteria).getResultList();
 	}
 	
@@ -206,5 +207,24 @@ public class TerminService {
 			return null;
 		}
 		return em.find(TerminVorlage.class, terminVorlageId);
+	}
+	
+	public TerminVorlage getTerminVorlageByVorlageValues(String name, String beschreibung, String teamId){
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<TerminVorlage> criteria = cb.createQuery(TerminVorlage.class);
+		Root<TerminVorlage> terminVorlage = criteria.from(TerminVorlage.class);
+		Join<TerminVorlage, Team> team = terminVorlage.join(TerminVorlage_.team);
+		criteria.select(terminVorlage).where(cb.and(
+				cb.equal(terminVorlage.get(TerminVorlage_.name), name),
+				cb.equal(terminVorlage.get(TerminVorlage_.beschreibung), beschreibung),
+				cb.equal(team.get(Team_.id), teamId)
+				)
+				).orderBy(cb.asc(terminVorlage.get(TerminVorlage_.name)));
+		List<TerminVorlage> erg = em.createQuery(criteria).getResultList();
+		if(erg == null || erg.size() == 0){
+			return null;
+		} else{
+			return erg.get(0);
+		}
 	}
 }

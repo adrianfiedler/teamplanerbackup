@@ -1,24 +1,9 @@
-/*
- * JBoss, Home of Professional Open Source
- * Copyright 2013, Red Hat, Inc. and/or its affiliates, and individual
- * contributors by the @authors tag. See the copyright.txt in the
- * distribution for a full listing of individual contributors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.jboss.as.quickstarts.kitchensink.rest;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +11,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+import javax.annotation.Resource;
+import javax.ejb.EJBContext;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import javax.mail.MessagingException;
@@ -61,6 +48,7 @@ import org.jboss.as.quickstarts.kitchensink.service.ZusageService;
 import org.jboss.as.quickstarts.kitchensink.util.CipherUtil;
 import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
+import org.jboss.as.quickstarts.kitchensink.util.ResponseTypes;
 import org.jboss.as.quickstarts.kitchensink.wrapper.UserREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.UserSettingsREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.util.WrapperUtil;
@@ -102,6 +90,9 @@ public class UserResourceRESTService {
     
     @Inject
     LoginTokenService loginTokenService;
+    
+    @Resource
+    private EJBContext context;
     
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -150,13 +141,8 @@ public class UserResourceRESTService {
         				invited = handleInvitation(user, email, invitationId);
         			}
         			if(invited){
-        				try {
-        					LoginToken loginToken = loginTokenService.login(user.getId());
-        					builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createLoginRest(user, loginToken)));
-        				} catch (Exception e) {
-        					e.printStackTrace();
-        					builder = Response.ok(Helper.createResponse("ERROR", "COULD NOT CREATE LOGIN TOKEN", null));
-        				}
+    					LoginToken loginToken = login(user);
+    					builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createLoginRest(user, loginToken)));
         			}
         			else{
         				builder = Response.ok(Helper.createResponse("ERROR", "INVITATION FAILED", null));
@@ -169,53 +155,70 @@ public class UserResourceRESTService {
     	return builder.build();
     }
     
+    private LoginToken login(User user){
+    	Calendar cal = Calendar.getInstance();
+    	cal.add(Calendar.HOUR_OF_DAY, 2);
+
+    	if(user == null){
+    		return null;
+    	} else{
+    		LoginToken loginToken = loginTokenService.findTokenByUserId(user.getId());
+        	if(loginToken == null){
+        		loginToken = new LoginToken();
+        	} 
+    		loginToken.setTimeOut(cal.getTime());
+    		loginToken.setToken(UUID.randomUUID().toString());
+    		loginToken.setUser(user);
+
+    		loginToken = loginTokenService.save(loginToken);
+    		return loginToken;
+    	}
+    }
+    
     private boolean handleInvitation(User user, String email, String encryptedInvitationId){
-    	try{
-	    	String invitationId = CipherUtil.decrypt(encryptedInvitationId);
-	    	if(invitationId != null){
-	    		Einladung einladung = einladungService.findById(invitationId);
-	        	if(einladung != null && einladung.getStatus() == 0){
-	        		Team team = einladung.getTeam();
-	        		if(team != null){
-	        			if(Helper.checkIfUserInTeam(user, team)){
-	        				return true;
-	        			}
-	        			user.setVerein(team.getVerein());
-	        			user = userService.update(user);
-	        			TeamRolle rolle = new TeamRolle();
-	        			rolle.setInTeam(true);
-	        			rolle.setRolle(Constants.SPIELER_ROLE);
-	        			rolle.setTeam(team);
-	        			rolle.setUser(user);
-	        			
-	        			for(Termin t : team.getTermine()){
-	        				Zusage zusage = new Zusage();
-	        				zusage.setKommentar("");
-	        				zusage.setStatus(0);
-	        				zusage.setTermin(t);
-	        				zusage.setUser(user);
-	        				zusageService.save(zusage);
-	        			}
-	        			rollenService.save(rolle);
-	        			einladungService.delete(einladung);
-	        			user.getRollen().add(rolle);
-	        			team.getRollen().add(rolle);
-	        			return true;
-	        		}
-	        	}
-	    	}
-    	} catch (Exception e) {
-			return false;
-		}
+    	String invitationId = CipherUtil.decrypt(encryptedInvitationId);
+    	if(invitationId != null){
+    		Einladung einladung = einladungService.findById(invitationId);
+        	if(einladung != null && einladung.getStatus() == 0){
+        		Team team = einladung.getTeam();
+        		if(team != null){
+        			if(Helper.checkIfUserInTeam(user, team)){
+        				return true;
+        			}
+        			user.setVerein(team.getVerein());
+        			TeamRolle rolle = new TeamRolle();
+        			rolle.setInTeam(true);
+        			rolle.setRolle(einladung.getRolle());
+        			rolle.setTeam(team);
+        			rolle.setUser(user);
+        			
+        			for(Termin t : team.getTermine()){
+        				Zusage zusage = new Zusage();
+        				zusage.setKommentar("");
+        				zusage.setStatus(0);
+        				zusage.setTermin(t);
+        				zusage.setUser(user);
+        				zusageService.save(zusage);
+        			}
+        			einladung.setInviter(null);
+        			einladung.setTeam(null);
+        			team.getEinladungen().remove(einladung);
+        			einladungService.delete(einladung);
+        			user.getRollen().add(rolle);
+        			user.getEinladungen().remove(einladung);
+        			user = userService.update(user);
+        			return true;
+        		}
+        	}
+    	}
     	return false;
     }
     
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     public Response createUser(@FormParam("email") String email, @FormParam("vorname") String vorname, @FormParam("name") String name, 
-    		@FormParam("password") String password, @FormParam("invitationId") String invitationId) {
+    		@FormParam("password") String password, @FormParam("invitationId") String invitationId) throws MessagingException, UnsupportedEncodingException {
         Response.ResponseBuilder builder = null;
-        try {
         	User existingUser = userService.findByEmail(email);
         	if(existingUser == null){
         		User user = new User();
@@ -226,15 +229,24 @@ public class UserResourceRESTService {
                 user.setAktiviert(false);
                 String aktivierToken = UUID.randomUUID().toString();
                 user.setAktivierToken(aktivierToken);
-                user.setUserSettings(new UserSettings());
+                UserSettings userSettings = new UserSettings();
+                user.setUserSettings(userSettings);
+                user.setRollen(new ArrayList<TeamRolle>());
+                user.setEinladungen(new ArrayList<Einladung>());
+                user.setZusagen(new ArrayList<Zusage>());
                 userService.register(user);
                 
                 String encodedToken = URLEncoder.encode(aktivierToken, "UTF-8");
                 List<String> emailList = new ArrayList<String>();
                 emailList.add(email);
-                sendMailService.sendEmail(emailList, "Willkommen bei TeamPlanner", "Um deine Aktivierung abzuschließen, hier klicken: "
+                try{
+                	sendMailService.sendEmail(emailList, "Willkommen bei TeamPlanner", "Um deine Aktivierung abzuschließen, hier klicken: "
                 		+ "<a href='"+Constants.ACTIVATION_URL+"?activationToken="+encodedToken+"'>Aktivierung</a>", null);
-                
+                } catch(MessagingException messagingException){
+                	// could not send mail : rollback
+                	context.setRollbackOnly();
+                	return Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null)).build();
+                }
                 boolean invited = true;
                 if(invitationId != null && invitationId.length() > 0){
         			invited = handleInvitation(user, email, invitationId);
@@ -247,125 +259,128 @@ public class UserResourceRESTService {
         	} else{
         		builder = Response.ok(Helper.createResponse("ERROR", "EMAIL EXISTS", null));
         	}
-        } catch (EntityExistsException e) {
-            builder = Response.ok(Helper.createResponse("ERROR", "USER EXISTS", null));
-        } catch(IllegalArgumentException e){
-        	builder = Response.ok(Helper.createResponse("ERROR", "ILLEGAL ARGUMENT", null));
-        } catch(TransactionRequiredException e){
-        	builder = Response.ok(Helper.createResponse("ERROR", "TRANSACTION REQUIRED", null));
-        } catch (MessagingException e) {
-			builder = Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null));
-		} catch (UnsupportedEncodingException e) {
-			builder = Response.ok(Helper.createResponse("ERROR", "TOKEN ENCODE ERROR", null));
-		}
         return builder.build();
     }
     
     @GET
     @Path("/activate")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response activateUser(@QueryParam("activationToken") String activationToken) {
+    public Response activateUser(@QueryParam("activationToken") String activationToken) throws MessagingException {
         Response.ResponseBuilder builder = null;
-        try {
-        	User existingUser = userService.findByActivationToken(activationToken);
-        	if(existingUser != null){
-        		existingUser.setAktiviert(true);
-        		existingUser = userService.update(existingUser);
-                
-        		if(existingUser.getEmail() != null){
-        			List<String> emailList = new ArrayList<String>();
-                    emailList.add(existingUser.getEmail());
-        			sendMailService.sendEmail(emailList, "Deine Aktivierung bei TeamPlanner", "Dein Accout wurde erfolgreich aktiviert. Du kannst dich jetz hier einloggen: <a href='"+Constants.LOGIN_URL+"'>TeamPlanner Login</a>", null);
-        			builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-        		} else{
-        			builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
-        		}
-        	} else{
-        		builder = Response.ok(Helper.createResponse("ERROR", "NO USER", null));
-        	}
-        } catch (MessagingException e) {
-        	builder = Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null));
-		} 
+    	User existingUser = userService.findByActivationToken(activationToken);
+    	if(existingUser != null){
+    		existingUser.setAktiviert(true);
+    		existingUser = userService.update(existingUser);
+            
+    		if(existingUser.getEmail() != null){
+    			List<String> emailList = new ArrayList<String>();
+                emailList.add(existingUser.getEmail());
+    			sendMailService.sendEmail(emailList, "Deine Aktivierung bei TeamPlanner", "Dein Accout wurde erfolgreich aktiviert. Du kannst dich jetz hier einloggen: <a href='"+Constants.LOGIN_URL+"'>TeamPlanner Login</a>", null);
+    			builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    		} else{
+    			builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
+    		}
+    	} else{
+    		builder = Response.ok(Helper.createResponse("ERROR", "NO USER", null));
+    	}
         return builder.build();
     }
     
     @GET
     @Path("/inviteMember")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response inviteMember(@QueryParam("trainerId") String trainerId, @QueryParam("email") String email,
-    		@QueryParam("vorname") String vorname, @QueryParam("name") String name, @QueryParam("teamId") String teamId){
+    public Response inviteMember(@QueryParam("trainerId") String token, @QueryParam("email") String email,
+    		@QueryParam("vorname") String vorname, @QueryParam("name") String name, @QueryParam("teamId") String teamId, @QueryParam("rolle") String rolle){
         Response.ResponseBuilder builder = null;
-        	User trainerUser = userService.findById(trainerId);
-        	if(trainerUser != null){
-        		Team team = teamService.findById(teamId);
-        		if(team != null){
-        			if(Helper.checkIfUserInTeamAndTrainer(trainerUser, team)){
-        				if(email != null){
-        					User existingEmailUser = userService.findByEmail(email);
-        					if(existingEmailUser == null || !Helper.checkIfUserInTeam(existingEmailUser, team)){
-        						if(vorname != null && name != null){
-            						try {
-            							Einladung einladung = einladungService.findByTeamUndEmail(team.getId(), email);
-            							if(einladung == null){
-            								einladung = new Einladung();
-            								einladung.setEmail(email);
-            								einladung.setName(name);
-            								einladung.setVorname(vorname);
-            								einladung.setInviter(trainerUser);
-            								einladung.setStatus(0);
-            								einladung.setTeam(team);
-            								einladungService.save(einladung);
-            							}
-            							List<String> emailList = new ArrayList<String>();
-            							String encryptedInvitationId = CipherUtil.encrypt(einladung.getId());
-            							emailList.add(email);
-                                    		sendMailService.sendEmail(emailList, "Du wurdest zu TeamPlaner eingeladen",
-                                    		"Hallo " + vorname + " " + name + ",<br /><br />" +
-                         					"Du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zum Team "+team.getName()+" in TeamPlaner eingeladen."
-                        					+ "<br />Um diesem Team beizutreten, logge dich unter folgendem Link ein oder registriere dich hier: <a href='"+Constants.LOGIN_URL+"?id="+URLEncoder.encode(encryptedInvitationId, "UTF-8")+"'>TeamPlanner Login</a>", null);
-                                    	builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-                                    } catch (MessagingException e) {
-                                    	builder = Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null));
-                            		} catch (Exception e) {
-                            			builder = Response.ok(Helper.createResponse("ERROR", "DATABASE SAVE ERROR", null));
-    								} 
-            					} else{
-            						builder = Response.ok(Helper.createResponse("ERROR", "NO USER NAME OR SURNAME", null));
-            					}
-        					} else{
-        						builder = Response.ok(Helper.createResponse("ERROR", "EMAIL ALREADY IN TEAM", null));
-        					}
-                		} else{
-                			builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
-                		}
-        			} else{
-        				builder = Response.ok(Helper.createResponse("ERROR", "USER NOT TRAINER OR NOT IN TEAM", null));
-        			}
-        		} else{
-        			builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM FOUND", null));
-        		}
-        	} else{
-        		builder = Response.ok(Helper.createResponse("ERROR", "NO TRAINER USER", null));
-        	}
+        if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User trainerUser = loginTokenService.getUserIfLoggedIn(token);
+    		if(trainerUser != null){
+    			Team team = teamService.findById(teamId);
+    			if(team != null){
+    				if(Helper.checkIfUserInTeamAndTrainer(trainerUser, team) || 
+    						(trainerUser.isAdmin() && team.getVerein().getId().equals(trainerUser.getVerein().getId()))){
+    					if(email != null){
+    						User existingEmailUser = userService.findByEmail(email);
+    						if(existingEmailUser == null || !Helper.checkIfUserInTeam(existingEmailUser, team)){
+    							if(vorname != null && name != null){
+    								if(rolle != null && rolle.length() > 0){
+    									try {
+    										Einladung einladung = einladungService.findByTeamUndEmail(team.getId(), email);
+    										if(einladung == null){
+    											einladung = new Einladung();
+    											einladung.setEmail(email);
+    											einladung.setName(name);
+    											einladung.setVorname(vorname);
+    											einladung.setInviter(trainerUser);
+    											einladung.setStatus(0);
+    											einladung.setTeam(team);
+    											if(rolle.equals(Constants.TRAINER_ROLE)){
+    												einladung.setRolle(Constants.TRAINER_ROLE);
+    											} else{
+    												einladung.setRolle(Constants.SPIELER_ROLE);
+    											}
+    											einladungService.save(einladung);
+    										}
+    										List<String> emailList = new ArrayList<String>();
+    										String encryptedInvitationId = CipherUtil.encrypt(einladung.getId());
+    										emailList.add(email);
+    										sendMailService.sendEmail(emailList, "Du wurdest zu TeamPlaner eingeladen",
+    												"Hallo " + vorname + " " + name + ",<br /><br />" +
+    														"Du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zum Team "+team.getName()+" in TeamPlaner eingeladen."
+    														+ "<br />Um diesem Team beizutreten, logge dich unter folgendem Link ein oder registriere dich hier: <a href='"+Constants.LOGIN_URL+"?id="+URLEncoder.encode(encryptedInvitationId, "UTF-8")+"'>TeamPlanner Login</a>", null);
+    										builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    									} catch (MessagingException e) {
+    										builder = Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null));
+    									} catch (Exception e) {
+    										builder = Response.ok(Helper.createResponse("ERROR", "DATABASE SAVE ERROR", null));
+    									} 
+    								} else{
+    									builder = Response.ok(Helper.createResponse("ERROR", "NO ROLLE", null));
+    								}
+    							} else{
+    								builder = Response.ok(Helper.createResponse("ERROR", "NO USER NAME OR SURNAME", null));
+    							}
+    						} else{
+    							builder = Response.ok(Helper.createResponse("ERROR", "EMAIL ALREADY IN TEAM", null));
+    						}
+    					} else{
+    						builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
+    					}
+    				} else{
+    					builder = Response.ok(Helper.createResponse("ERROR", "USER NOT TRAINER OR NOT IN TEAM", null));
+    				}
+    			} else{
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM FOUND", null));
+    			}
+    		} else{
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		}
+    	}
         return builder.build();
     }
     
     @POST
     @Path("/changePassword")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response changePassword(@FormParam("userId") String userId, @FormParam("oldPw") String oldPw, @FormParam("newPw") String newPw) {
+    public Response changePassword(@FormParam("userId") String token, @FormParam("oldPw") String oldPw, @FormParam("newPw") String newPw) {
         Response.ResponseBuilder builder = null;
-    	User existingUser = userService.findById(userId);
-    	if(existingUser != null){
-    		if(existingUser.getPasswort().equals(oldPw)){
-    			existingUser.setPasswort(newPw);
-    			userService.update(existingUser);
-    			builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-    		} else{
-    			builder = Response.ok(Helper.createResponse("ERROR", "WRONG PASSWORD", null));
-    		}
+        if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
     	} else{
-    		builder = Response.ok(Helper.createResponse("ERROR", "NO USER", null));
+    		User existingUser = loginTokenService.getUserIfLoggedIn(token);
+    		if(existingUser != null){
+    			if(existingUser.getPasswort().equals(oldPw)){
+    				existingUser.setPasswort(newPw);
+    				userService.update(existingUser);
+    				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    			} else{
+    				builder = Response.ok(Helper.createResponse("ERROR", "WRONG PASSWORD", null));
+    			}
+    		} else{
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		}
     	}
         return builder.build();
     }
@@ -410,9 +425,9 @@ public class UserResourceRESTService {
     	Response.ResponseBuilder builder = null;
     	if(userSettings != null){
     		if(userSettings.userId != null){
-    			User user = userService.findById(userSettings.userId);
+    			User user = loginTokenService.getUserIfLoggedIn(userSettings.userId);
     			if(user == null){
-    				builder = Response.ok(Helper.createResponse("ERROR", "NO USER FOUND", null));
+    				builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
     			} else{
     				UserSettings newUserSettings = new UserSettings();
     				newUserSettings.setMontagsAbsagen(userSettings.montagsAbsagen);
@@ -427,7 +442,7 @@ public class UserResourceRESTService {
     				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     			}
     		} else{
-    			builder = Response.ok(Helper.createResponse("ERROR", "NO USER ID SET", null));
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
     		}
     	} else{
     		builder = Response.ok(Helper.createResponse("ERROR", "NO SETTINGS", null));
@@ -438,18 +453,22 @@ public class UserResourceRESTService {
     @GET
     @Path("/getUserSettings")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getUserSettings(@QueryParam("userId") String userId) {
+    public Response getUserSettings(@QueryParam("userId") String token) {
     	Response.ResponseBuilder builder = null;
-        User user = userService.findById(userId);
-        if (user == null) {
-        	builder = Response.ok(Helper.createResponse("ERROR", "USER ID NOT FOUND", null));
-        } else{
-        	if(user.getUserSettings() == null){
-        		builder = Response.ok(Helper.createResponse("ERROR", "NO USER SETTINGS FOUND", null));
-        	} else{
-        		builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(user.getUserSettings(), user.getId())));
-        	}
-        }
+    	if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if (user == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if(user.getUserSettings() == null){
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO USER SETTINGS FOUND", null));
+    			} else{
+    				builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(user.getUserSettings(), user.getId())));
+    			}
+    		}
+    	}
         return builder.build();
     }
     
@@ -486,5 +505,84 @@ public class UserResourceRESTService {
     	}
         return builder.build();
     }
-    		
+    
+    @GET
+    @Path("/getUser")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getUser(@QueryParam("token") String token){
+    	Response.ResponseBuilder builder = null;
+    	if(token != null && token.length() > 0){
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+        	if(user == null){
+        		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+        	} else{
+				LoginToken loginToken = user.getLoginToken();
+				if(loginToken == null){
+					builder = Response.ok(Helper.createResponse("ERROR", "NO TOKEN FOR USER FOUND", null));					
+				} else{
+					builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createLoginRest(user, loginToken)));
+				}
+        	}
+    	} else{
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	}
+    	return builder.build();
+    }
+    
+    @GET
+    @Path("/logout")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response logout(@QueryParam("userId") String token){
+    	Response.ResponseBuilder builder = null;
+    	if(token != null && token.length() > 0){
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+        	if(user == null){
+        		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+        	} else{
+				LoginToken loginToken = user.getLoginToken();
+				if(loginToken == null){
+					builder = Response.ok(Helper.createResponse("ERROR", "NO TOKEN FOR USER FOUND", null));					
+				} else{
+					loginToken.getUser().setLoginToken(null);
+					loginToken.setUser(null);
+					loginTokenService.delete(loginToken);
+					builder = Response.ok(Helper.createResponse("SUCCESS", "",null));
+				}
+        	}
+    	} else{
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	}
+    	return builder.build();
+    }
+    
+    
+    @GET
+    @Path("/setAllUserMailSettings")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setAllUserMailSettings(@QueryParam("userId") String token, @QueryParam("weeklyStatusMail") Boolean weeklyStatusMail, 
+    		@QueryParam("terminReminderMail") Boolean terminReminderMail) {
+    	Response.ResponseBuilder builder = null;
+    	if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if (user == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if(weeklyStatusMail == null){
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO WEEKLY STATUS MAIL SET", null));
+    			} else{
+    				if(terminReminderMail == null){
+        				builder = Response.ok(Helper.createResponse("ERROR", "NO TERMIN REMINDER MAIL SET", null));
+        			} else{
+        				user.setWeeklyStatusMail(weeklyStatusMail);
+        				user.setTerminReminderMail(terminReminderMail);
+        				userService.update(user);
+        				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+        			}
+    			}
+    		}
+    	}
+        return builder.build();
+    }
 }

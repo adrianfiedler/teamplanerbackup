@@ -30,6 +30,9 @@ import javax.persistence.criteria.Root;
 import org.jboss.as.quickstarts.kitchensink.model.Einladung;
 import org.jboss.as.quickstarts.kitchensink.model.Ort;
 import org.jboss.as.quickstarts.kitchensink.model.Ort_;
+import org.jboss.as.quickstarts.kitchensink.model.Team;
+import org.jboss.as.quickstarts.kitchensink.model.Termin;
+import org.jboss.as.quickstarts.kitchensink.model.Termin_;
 import org.jboss.as.quickstarts.kitchensink.model.Verein;
 import org.jboss.as.quickstarts.kitchensink.model.Verein_;
 
@@ -43,7 +46,7 @@ public class OrtService {
     @Inject
     private EntityManager em;
 
-    public Ort save(Ort ort) throws Exception {
+    public Ort save(Ort ort) {
         return em.merge(ort);
     }
     
@@ -62,7 +65,21 @@ public class OrtService {
         return em.createQuery(criteria).getResultList();
     }
     
-    public void delete(Ort ort) throws Exception {
+    public void delete(Ort ort) {
     	em.remove(ort);
+    }
+    
+    public Ort findByTerminId(String terminId){
+    	CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Ort> criteria = cb.createQuery(Ort.class);
+        Root<Termin> termin = criteria.from(Termin.class);
+        Join<Termin,Ort> ort = termin.join(Termin_.ort);
+        criteria.select(ort).where(cb.equal(termin.get(Termin_.id), terminId));
+        List<Ort> erg = em.createQuery(criteria).getResultList();
+        if(erg != null && erg.size() > 0){
+        	return erg.get(0);
+        } else{
+        	return null;
+        }
     }
 }

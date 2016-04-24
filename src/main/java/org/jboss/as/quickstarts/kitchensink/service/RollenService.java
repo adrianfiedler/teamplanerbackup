@@ -35,7 +35,7 @@ public class RollenService {
     @Inject
     private EntityManager em;
 
-    public void save(TeamRolle rolle) throws Exception {
+    public void save(TeamRolle rolle) {
         em.persist(rolle);
     }
     
@@ -43,7 +43,7 @@ public class RollenService {
         return em.find(TeamRolle.class, id);
     }
     
-    public void delete(TeamRolle rolle) throws Exception {
+    public void delete(TeamRolle rolle) {
     	em.remove(rolle);
     }
 }

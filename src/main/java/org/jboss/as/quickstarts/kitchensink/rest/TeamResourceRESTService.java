@@ -17,6 +17,7 @@
 package org.jboss.as.quickstarts.kitchensink.rest;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -37,12 +38,22 @@ import javax.ws.rs.core.Response;
 
 import org.jboss.as.quickstarts.kitchensink.model.Einladung;
 import org.jboss.as.quickstarts.kitchensink.model.Team;
+import org.jboss.as.quickstarts.kitchensink.model.TeamMailSettings;
 import org.jboss.as.quickstarts.kitchensink.model.TeamRolle;
+import org.jboss.as.quickstarts.kitchensink.model.TeamSettings;
+import org.jboss.as.quickstarts.kitchensink.model.Termin;
 import org.jboss.as.quickstarts.kitchensink.model.User;
+import org.jboss.as.quickstarts.kitchensink.model.Verein;
 import org.jboss.as.quickstarts.kitchensink.service.EinladungService;
+import org.jboss.as.quickstarts.kitchensink.service.LoginTokenService;
+import org.jboss.as.quickstarts.kitchensink.service.RollenService;
 import org.jboss.as.quickstarts.kitchensink.service.TeamService;
 import org.jboss.as.quickstarts.kitchensink.service.UserService;
+import org.jboss.as.quickstarts.kitchensink.service.VereinService;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
+import org.jboss.as.quickstarts.kitchensink.util.ResponseTypes;
+import org.jboss.as.quickstarts.kitchensink.wrapper.TerminREST;
+import org.jboss.as.quickstarts.kitchensink.wrapper.request.TeamSettingsRequestREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.util.WrapperUtil;
 
 import de.masalis.teamplanner.mail.SendMail;
@@ -70,36 +81,49 @@ public class TeamResourceRESTService {
     
     @Inject 
     EinladungService einladungService;
+    
+    @Inject
+    VereinService vereinService;
+    
+    @Inject
+    LoginTokenService loginTokenService;
+    
+    @Inject 
+    RollenService rollenService;
 
     //liste des Teams zur Verwaltung
     @GET
     @Path("/teamListById")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response lookupTeamListById(@QueryParam("teamId") String teamId, @QueryParam("userId") String userId) {
+    public Response lookupTeamListById(@QueryParam("teamId") String teamId, @QueryParam("userId") String token) {
     	Response.ResponseBuilder builder = null;
-    	User user = userService.findById(userId);
-    	if(user == null){
-    		builder = Response.ok(Helper.createResponse("ERROR", "USER NOT FOUND", null));
+    	if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
     	} else{
-    		boolean inTeam = false;
-    		for(TeamRolle rolle : user.getRollen()){
-    			if(rolle.getTeam().getId().equals(teamId)){
-    				inTeam = true;
-    				break;
-    			}
-    		}
-    		if(!inTeam){
-    			builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM", null));
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if(user == null){
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
     		} else{
-    			Team team = teamService.findById(teamId);
-    			if (team == null) {
-    				builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
-    			} else{
-    				List<Einladung> einladungen = null;
-    				if(Helper.checkIfUserInTeamAndTrainer(user, team)){
-    					einladungen = einladungService.findByTeamId(team.getId());
+    			boolean inTeam = false;
+    			for(TeamRolle rolle : user.getRollen()){
+    				if(rolle.getTeam().getId().equals(teamId)){
+    					inTeam = true;
+    					break;
     				}
-    				builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createTeamListRest(team, user, einladungen)));
+    			}
+    			if(!inTeam){
+    				builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM", null));
+    			} else{
+    				Team team = teamService.findById(teamId);
+    				if (team == null) {
+    					builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
+    				} else{
+    					List<Einladung> einladungen = null;
+    					if(Helper.checkIfUserInTeamAndTrainer(user, team)){
+    						einladungen = einladungService.findByTeamId(team.getId());
+    					}
+    					builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createTeamListRest(team, user, einladungen)));
+    				}
     			}
     		}
     	}
@@ -110,40 +134,49 @@ public class TeamResourceRESTService {
     @Path("/sendMail")
     @Produces(MediaType.APPLICATION_JSON)
     public Response sendMailToTeam(@FormParam("teamId") String teamId, @FormParam("subject") String subject, 
-    		@FormParam("message") String message, @FormParam("userIds") List<String> userIds) {
+    		@FormParam("message") String message, @FormParam("userIds") List<String> userIds, @FormParam("userId") String token) {
     	Response.ResponseBuilder builder = null;
-    	if(userIds == null || teamId == null || userIds.size() == 0){
-    		builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM OR USERS", null));
+    	if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
     	} else{
-    		String listString = "";
-    		for (String s : userIds)
-    		{
-    		    listString += s + "\t";
-    		}
-    		log.log(Level.INFO, "userIds: "+listString);
-    		Team team = teamService.findById(teamId);
-    		if(team == null){
-    			builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
-    		} else{
-    			List<String> toList = new ArrayList<String>(userIds.size());
-    			for(String userId : userIds){
-    				User user = userService.findById(userId);
-    				if(user != null && Helper.checkIfUserInTeam(user, team)){
-    					String email = user.getEmail();
-    					toList.add(email);
-    				}
-    			}
-    			if(toList.size() == 0){
-    				builder = Response.ok(Helper.createResponse("ERROR", "RECIPIENTS = 0", null));
-    			} else{
-    				try {
-    					sendMail.sendEmail(toList, subject, message, "noreply-"+team.getName());
-    					builder = Response.ok(Helper.createResponse("SUCCESS", "SENT TO "+toList.size()+" recipients", null));
-    				} catch (MessagingException e) {
-    					builder = Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null));
-    					e.printStackTrace();
-    				}
-    			}
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if (user == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else {
+    			if(userIds == null || teamId == null || userIds.size() == 0){
+    	    		builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM OR USERS", null));
+    	    	} else{
+    	    		String listString = "";
+    	    		for (String s : userIds)
+    	    		{
+    	    		    listString += s + "\t";
+    	    		}
+    	    		log.log(Level.INFO, "userIds: "+listString);
+    	    		Team team = teamService.findById(teamId);
+    	    		if(team == null){
+    	    			builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
+    	    		} else{
+    	    			List<String> toList = new ArrayList<String>(userIds.size());
+    	    			for(String userId : userIds){
+    	    				User userList = userService.findById(userId);
+    	    				if(userList != null && Helper.checkIfUserInTeam(userList, team)){
+    	    					String email = userList.getEmail();
+    	    					toList.add(email);
+    	    				}
+    	    			}
+    	    			if(toList.size() == 0){
+    	    				builder = Response.ok(Helper.createResponse("ERROR", "RECIPIENTS = 0", null));
+    	    			} else{
+    	    				try {
+    	    					sendMail.sendEmail(toList, subject, message, "noreply-"+team.getName());
+    	    					builder = Response.ok(Helper.createResponse("SUCCESS", "SENT TO "+toList.size()+" recipients", null));
+    	    				} catch (MessagingException e) {
+    	    					builder = Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null));
+    	    					e.printStackTrace();
+    	    				}
+    	    			}
+    	    		}
+    	    	}
     		}
     	}
     	return builder.build();
@@ -166,6 +199,10 @@ public class TeamResourceRESTService {
     				builder = Response.ok(Helper.createResponse("ERROR", "EINLADUNG NOT FOUND", null));
     			} else{
     				try {
+    					einladung.getInviter().getEinladungen().remove(einladung);
+    					einladung.getTeam().getEinladungen().remove(einladung);
+    					einladung.setInviter(null);
+    					einladung.setTeam(null);
 						einladungService.delete(einladung);
 						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 					} catch (Exception e) {
@@ -177,4 +214,335 @@ public class TeamResourceRESTService {
     	}
     	return builder.build();
     }
+    
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createTeam(@FormParam("userId") String token, @FormParam("teamName") String teamName) {
+    	Response.ResponseBuilder builder = null;
+    	if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		if(teamName == null || teamName.length() == 0){
+    			builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM NAME SET", null));
+    		} else{
+    			User user = loginTokenService.getUserIfLoggedIn(token);
+    			if(user == null){
+    				builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    			} else{
+    				if(user.isAdmin() == false){
+    					builder = Response.ok(Helper.createResponse("ERROR", "USER NOT ADMIN", null));
+    				} else{
+    					Verein verein = user.getVerein();
+    					if(verein.getVereinsTeams().size() >= verein.getGekaufteTeams()){
+    						builder = Response.ok(Helper.createResponse("ERROR", "NO MORE FREE TEAMS", null));
+    					} else{
+    						Team team = new Team();
+    						team.setName(teamName);
+    						team.setVerein(verein);
+    						verein.getVereinsTeams().add(team);
+    						TeamMailSettings teamMailSettings = new TeamMailSettings();
+    						teamMailSettings.setHoursBeforeTrainerReminder(2);
+    						teamMailSettings.setMailText("");
+    						teamMailSettings.setShowIntroduction(true);
+    						teamMailSettings.setShowMailText(true);
+    						teamMailSettings.setTeam(team);
+    						team.setWeeklyTeamMailSettings(teamMailSettings);
+    						
+    						TeamSettings teamSettings = new TeamSettings();
+    						teamSettings.setTrainerMussZusagen(false);
+    						teamSettings.setTeam(team);
+    						team.setTeamSettings(teamSettings);
+    						
+							team = teamService.save(team);
+							verein = vereinService.save(verein);
+							builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(team)));
+    					}
+    				}
+    			}
+    		}
+    	}
+    	return builder.build();
+    }
+    
+    @POST
+    @Path("/deleteTeam")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteTeam(@FormParam("userId") String token, @FormParam("teamId") String teamId) {
+    	Response.ResponseBuilder builder = null;
+    	if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		if(teamId == null || teamId.length() == 0){
+    			builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM ID SET", null));
+    		} else{
+    			User user = loginTokenService.getUserIfLoggedIn(token);
+    			if(user == null){
+    				builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    			} else{
+    				Team team = teamService.findById(teamId);
+    				if(team == null){
+    					builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
+    				} else{
+    					if(user.isAdmin() == false){
+    						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT ADMIN", null));
+    					} else{
+    						Verein verein = user.getVerein();
+    						//verein.getVereinsTeams().remove(team);
+    						try {
+    							teamService.delete(team);
+    							verein = vereinService.save(verein);
+    							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    						} catch (Exception e) {
+    							builder = Response.ok(Helper.createResponse("ERROR", "DELETE TEAM FAILED", null));
+    						}
+    					}
+    				}
+    			}
+    		}
+    	}
+    	return builder.build();
+    }
+    
+    @GET
+    @Path("/rename")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response renameTeam(@QueryParam("teamId") String teamId, @QueryParam("userId") String token, 
+    		@QueryParam("newName") String newName) {
+    	Response.ResponseBuilder builder = null;
+    	if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	}  else{
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if(user == null){
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			Team team = teamService.findById(teamId);
+    			if(team == null){
+    				builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
+    			} else{
+    				if(newName == null || newName.length() == 0){
+    					builder = Response.ok(Helper.createResponse("ERROR", "NO NEW NAME", null));
+    				} else{
+    					if(!team.getVerein().getId().equals(user.getVerein().getId())){
+    						builder = Response.ok(Helper.createResponse("ERROR", "USER AND TEAM NOT SAME VEREIN", null));
+    					} else{
+    						if(Helper.checkIfUserInTeamAndTrainer(user, team) || user.isAdmin()){
+    							team.setName(newName);
+    							teamService.save(team);
+    							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    						} else{
+    							builder = Response.ok(Helper.createResponse("ERROR", "USER NOT TRAINER IN TEAM AND NOT ADMIN", null));
+    						}
+    					}
+    				}
+    			}
+    		}
+    	}
+    	return builder.build();
+    }
+    
+    @GET
+	@Path("/removeUser")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response removeUserFromTeam(@QueryParam("userId") String token,
+			@QueryParam("toRemoveId") String toRemoveId, @QueryParam("teamId") String teamId) {
+		Response.ResponseBuilder builder = null;
+		if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if (user == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else {
+    			if(toRemoveId == null || toRemoveId.length() == 0){
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO TO REMOVE ID SET", null));
+    			} else{
+    				User toRemoveUser = userService.findById(toRemoveId);
+    				if(toRemoveUser == null){
+    					builder = Response.ok(Helper.createResponse("ERROR", "USER TO REMOVE NOT FOUND", null));
+    				} else{
+    					if(teamId == null || teamId.length() == 0){
+    						builder = Response.ok(Helper.createResponse("ERROR", "TEAM ID NOT SET", null));
+    					} else{
+    						Team team = teamService.findById(teamId);
+    						if(team == null){
+    							builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
+    						} else{
+    							if(Helper.checkIfUserInTeamAndTrainer(user, team) || user.isAdmin()){
+    								if(!Helper.checkIfUserInTeam(toRemoveUser, team)){
+    									builder = Response.ok(Helper.createResponse("ERROR", "TO REMOVE USER NOT IN TEAM", null));
+    								} else{
+    									TeamRolle rolleToRemove = null;
+    									for(TeamRolle rolle : team.getRollen()){
+    										if(rolle.getUser().getId().equals(toRemoveUser.getId())){
+    											rolleToRemove = rolle;
+    											break;
+    										}
+    									}
+    									if(rolleToRemove != null){
+    										team.getRollen().remove(rolleToRemove);
+    										rolleToRemove.setTeam(null);
+    										rolleToRemove.setUser(null);
+    										toRemoveUser.getRollen().remove(rolleToRemove);
+    										rollenService.delete(rolleToRemove);
+    										builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    									} else{
+    										builder = Response.ok(Helper.createResponse("ERROR", "COULD NOT FIND ROLLE", null));
+    									}
+    								}
+    							} else{
+    								builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM OR NOT TRAINER AND NOT ADMIN", null));
+    							}
+    						}
+    					}
+    				}
+    			}
+    		}
+    	}
+		return builder.build();
+	}
+    
+    @POST
+	@Path("/setWeeklyMailSettings")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response setWeeklyMailSettings(@FormParam("userId") String token,
+			@FormParam("mailText") String mailText, @FormParam("teamId") String teamId, @FormParam("showAnleitung") Boolean showAnleitung) {
+		Response.ResponseBuilder builder = null;
+		if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if (user == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else {
+    			if(teamId == null || teamId.length() == 0){
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM ID SET", null));
+    			} else{
+    				Team team = teamService.findById(teamId);
+    				if(team == null){
+    					builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM FOUND", null));
+    				} else{
+    					if(!Helper.checkIfUserInTeamAndTrainer(user, team)){
+    						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM AND TRAINER", null));
+    					} else{
+    						if(mailText == null || mailText.length() == 0){
+    							builder = Response.ok(Helper.createResponse("ERROR", "NO MAIL TEXT SET", null));
+    						} else{
+    							if(showAnleitung == null){
+    								builder = Response.ok(Helper.createResponse("ERROR", "NO SHOW ANLEITUNG SET", null));
+    							} else{
+    								TeamMailSettings teamMailSettings = teamService.findMailSettingsByTeamId(teamId);
+    								if(teamMailSettings == null){
+    									builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM MAIL SETTINGS FOUND", null));
+    								} else{
+    									teamMailSettings.setShowIntroduction(showAnleitung);
+    									teamMailSettings.setMailText(mailText);
+    									teamService.saveTeamMailSettings(teamMailSettings);
+    									builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    								}
+    							}
+    						}
+    					}
+    				}
+    			}
+    		}
+    	}
+		return builder.build();
+	}
+    
+    @GET
+	@Path("/getTeamMailSettings")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getTeamMailSettings(@QueryParam("userId") String token, @QueryParam("teamId") String teamId) {
+		Response.ResponseBuilder builder = null;
+		if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if (user == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else {
+    			if(!user.getVerein().getModule().isMailModul()){
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO MAIL MODULE", null));
+    			} else{
+    				if(teamId == null || teamId.length() == 0){
+    					builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM ID SET", null));
+    				} else{
+    					TeamMailSettings teamMailSettings = teamService.findMailSettingsByTeamId(teamId);
+    					if(teamMailSettings == null){
+    						builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM MAIL SETTINGS FOUND", null));
+    					} else{
+    						builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(teamMailSettings)));
+    					}
+    				}
+    			}
+    		}
+    	}
+		return builder.build();
+	}
+    
+    @POST
+	@Path("/setTeamSettings")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response setTeamSettings(TeamSettingsRequestREST teamSettingsRequest) {
+		Response.ResponseBuilder builder = null;
+		if(teamSettingsRequest.userId == null || teamSettingsRequest.userId.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User user = loginTokenService.getUserIfLoggedIn(teamSettingsRequest.userId);
+    		if (user == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else {
+    			if(teamSettingsRequest.teamId == null || teamSettingsRequest.teamId.length() == 0){
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM ID SET", null));
+    			} else{
+    				Team team = teamService.findById(teamSettingsRequest.teamId);
+    				if(team == null){
+    					builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
+    				} else{
+    					if(!Helper.checkIfUserInTeamAndTrainer(user, team)){
+    						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM AND TRAINER", null));
+    					} else{
+    						TeamSettings teamSettings = teamService.findTeamSettingsByTeamId(teamSettingsRequest.teamId);
+    						if(teamSettings == null){
+    							builder = Response.ok(Helper.createResponse("ERROR", "NO TEAMSETTINGS FOUND", null));
+    						} else{
+    							teamSettings.setTrainerMussZusagen(teamSettingsRequest.trainerMussZusagen);
+    							teamService.saveTeamSettings(teamSettings);
+    							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    						}
+    					}
+    				}
+    			}
+    		}
+    	}
+		return builder.build();
+	}
+    
+    @GET
+   	@Path("/getTeamSettings")
+   	@Produces(MediaType.APPLICATION_JSON)
+   	public Response getTeamSettings(@QueryParam("userId") String token, @QueryParam("teamId") String teamId) {
+   		Response.ResponseBuilder builder = null;
+   		if(token == null || token.length() == 0){
+       		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+       	} else{
+       		User user = loginTokenService.getUserIfLoggedIn(token);
+       		if (user == null) {
+       			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+       		} else {
+   				if(teamId == null || teamId.length() == 0){
+   					builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM ID SET", null));
+   				} else{
+   					TeamSettings teamSettings = teamService.findTeamSettingsByTeamId(teamId);
+   					if(teamSettings == null){
+   						builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM MAIL SETTINGS FOUND", null));
+   					} else{
+   						builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(teamSettings)));
+   					}
+   				}
+       		}
+       	}
+   		return builder.build();
+   	}
 }

@@ -48,4 +48,6 @@ public class TerminREST implements Serializable {
 	public String nextTerminId;
 	
 	public String previousTerminId;
+	
+	public String teamName;
 }

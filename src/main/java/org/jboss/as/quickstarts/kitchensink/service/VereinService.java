@@ -48,15 +48,15 @@ public class VereinService {
     @Inject
     private EntityManager em;
 
-    public void create(Verein verein) throws Exception {
+    public void create(Verein verein) {
         em.persist(verein);
     }
     
-    public void save(Verein verein) throws Exception {
-        em.merge(verein);
+    public Verein save(Verein verein) {
+        return em.merge(verein);
     }
     
-    public void delete(Verein verein) throws Exception {
+    public void delete(Verein verein) {
     	em.remove(verein);
     }
     

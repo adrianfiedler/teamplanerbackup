@@ -15,4 +15,5 @@ public class TeamREST implements Serializable {
 	public String name;
 	public String id;
 	public String userRolle;
+	public int spielerAnzahl;
 }

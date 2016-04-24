@@ -36,11 +36,11 @@ public class ZusageService {
     @Inject
     private EntityManager em;
 
-    public void save(Zusage zusage) throws Exception {
+    public void save(Zusage zusage) {
         em.persist(zusage);
     }
     
-    public void delete(Zusage zusage) throws Exception {
+    public void delete(Zusage zusage) {
     	em.remove(zusage);
     }
     

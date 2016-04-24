@@ -18,11 +18,10 @@ package org.jboss.as.quickstarts.kitchensink.model;
 
 import java.io.Serializable;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
-import javax.persistence.OneToOne;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -36,13 +35,14 @@ public class Einladung extends AbstractBaseEntity implements Serializable {
 	private String vorname;
     private String email;
     private int status;
+    private String rolle;
     
-    @OneToOne(optional = false, fetch = FetchType.EAGER)
-    @JoinColumn(name="TEAM_ID", nullable=false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name="TEAM_ID")
     private Team team;
     
-    @OneToOne(optional = false, fetch = FetchType.EAGER)
-    @JoinColumn(name="INVITER_USER_ID", nullable=false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name="INVITER_USER_ID")
     private User inviter;
 
     public String getEmail() {
@@ -91,5 +91,13 @@ public class Einladung extends AbstractBaseEntity implements Serializable {
 
 	public void setVorname(String vorname) {
 		this.vorname = vorname;
+	}
+
+	public String getRolle() {
+		return rolle;
+	}
+
+	public void setRolle(String rolle) {
+		this.rolle = rolle;
 	}
 }

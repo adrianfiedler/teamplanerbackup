@@ -49,11 +49,11 @@ public class Termin extends AbstractBaseEntity implements Serializable {
     
     private int defaultZusageStatus;
 
-    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.ALL})
+    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.PERSIST,CascadeType.MERGE})
     @JoinColumn(name = "ort_ref")
     private Ort ort;
     
-    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.ALL})
+    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.PERSIST,CascadeType.MERGE})
     @JoinColumn(name = "serie_ref")
     private Serie serie;
 
@@ -64,7 +64,7 @@ public class Termin extends AbstractBaseEntity implements Serializable {
     @Temporal(TemporalType.TIMESTAMP)
     private Date datum;
     
-    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.ALL})
+    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.PERSIST,CascadeType.MERGE})
     @JoinColumn(name = "team_ref")
     private Team team;
     

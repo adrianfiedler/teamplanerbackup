@@ -18,8 +18,10 @@ package org.jboss.as.quickstarts.kitchensink.model;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
 
 import javax.persistence.CascadeType;
+import javax.persistence.Convert;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -31,6 +33,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.hibernate.validator.constraints.Email;
 
+import de.masalis.teamplanner.converters.StringCryptoConverter;
+
 
 @SuppressWarnings("serial")
 @Entity
@@ -38,9 +42,12 @@ import org.hibernate.validator.constraints.Email;
 @XmlRootElement
 public class User extends AbstractBaseEntity implements Serializable {
 
+	@Convert(converter = StringCryptoConverter.class)
     private String name;
+	@Convert(converter = StringCryptoConverter.class)
     private String vorname;
     
+    @Convert(converter = StringCryptoConverter.class)
     private String passwort;
     
     private String facebookUserId;
@@ -56,27 +63,38 @@ public class User extends AbstractBaseEntity implements Serializable {
     
     private boolean terminReminderMail;
     
-    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.ALL})
+    private String timeZone;
+    
+    @ManyToOne(fetch=FetchType.EAGER)
     @JoinColumn(name = "verein_ref")
     private Verein verein;
 
     @Email
+    @Convert(converter = StringCryptoConverter.class)
     private String email;
 
-    @OneToMany(fetch=FetchType.EAGER, mappedBy="user")
+    @OneToMany(fetch=FetchType.EAGER, mappedBy="user", cascade={CascadeType.ALL})
     private List<TeamRolle> rollen;
     
-    @OneToMany(fetch=FetchType.LAZY, mappedBy="user")
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="user", cascade={CascadeType.ALL}, orphanRemoval=true)
+    private Set<PushToken> pushToken;
+    
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="user", cascade={CascadeType.ALL})
     private List<Zusage> zusagen;
     
-    private String facebook;
     private String googlePlus;
     private String fotoUrl;
     
-    @OneToOne(cascade = CascadeType.ALL, optional = false, fetch = FetchType.EAGER, orphanRemoval = true)
+    @OneToOne(cascade = CascadeType.ALL, optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name="user_settings_ref", nullable=false)
     private UserSettings userSettings;
 
+    @OneToMany(fetch=FetchType.EAGER, mappedBy="inviter", cascade={CascadeType.ALL}, orphanRemoval=true)
+    private List<Einladung> einladungen;
+    
+    @OneToOne(fetch=FetchType.LAZY, mappedBy="user", cascade={CascadeType.ALL}, orphanRemoval=true)
+    private LoginToken loginToken;
+    
     public String getName() {
         return name;
     }
@@ -99,14 +117,6 @@ public class User extends AbstractBaseEntity implements Serializable {
 
 	public void setGooglePlus(String googlePlus) {
 		this.googlePlus = googlePlus;
-	}
-
-	public String getFacebook() {
-		return facebook;
-	}
-
-	public void setFacebook(String facebook) {
-		this.facebook = facebook;
 	}
 
 	public String getFotoUrl() {
@@ -219,5 +229,37 @@ public class User extends AbstractBaseEntity implements Serializable {
 
 	public void setUserSettings(UserSettings userSettings) {
 		this.userSettings = userSettings;
+	}
+
+	public List<Einladung> getEinladungen() {
+		return einladungen;
+	}
+
+	public void setEinladungen(List<Einladung> einladungen) {
+		this.einladungen = einladungen;
+	}
+
+	public LoginToken getLoginToken() {
+		return loginToken;
+	}
+
+	public void setLoginToken(LoginToken loginToken) {
+		this.loginToken = loginToken;
+	}
+
+	public Set<PushToken> getPushToken() {
+		return pushToken;
+	}
+
+	public void setPushToken(Set<PushToken> pushToken) {
+		this.pushToken = pushToken;
+	}
+
+	public String getTimeZone() {
+		return timeZone;
+	}
+
+	public void setTimeZone(String timeZone) {
+		this.timeZone = timeZone;
 	}
 }

@@ -19,11 +19,13 @@ package org.jboss.as.quickstarts.kitchensink.model;
 import java.io.Serializable;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -39,11 +41,23 @@ public class Team extends AbstractBaseEntity implements Serializable {
     @JoinColumn(name = "verein_ref")
     private Verein verein;
     
-    @OneToMany(fetch=FetchType.LAZY, mappedBy="team")
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="team", cascade={CascadeType.ALL})
     private List<Termin> termine;
     
-    @OneToMany(fetch=FetchType.EAGER, mappedBy="team")
+    @OneToMany(fetch=FetchType.EAGER, mappedBy="team", cascade={CascadeType.ALL})
     private List<TeamRolle> rollen;
+    
+    @OneToMany(fetch=FetchType.EAGER, mappedBy="team", cascade={CascadeType.ALL}, orphanRemoval=true)
+    private List<Einladung> einladungen;
+    
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="team", cascade={CascadeType.ALL})
+    private List<TerminVorlage> terminVorlagen;
+    
+    @OneToOne(fetch=FetchType.LAZY, mappedBy="team", cascade={CascadeType.ALL})
+    private TeamMailSettings weeklyTeamMailSettings;
+    
+    @OneToOne(fetch=FetchType.LAZY, mappedBy="team", cascade={CascadeType.ALL})
+    private TeamSettings teamSettings;
     
     public String getName() {
         return name;
@@ -75,5 +89,37 @@ public class Team extends AbstractBaseEntity implements Serializable {
 
 	public void setVerein(Verein verein) {
 		this.verein = verein;
+	}
+
+	public List<Einladung> getEinladungen() {
+		return einladungen;
+	}
+
+	public void setEinladungen(List<Einladung> einladungen) {
+		this.einladungen = einladungen;
+	}
+
+	public List<TerminVorlage> getTerminVorlagen() {
+		return terminVorlagen;
+	}
+
+	public void setTerminVorlagen(List<TerminVorlage> terminVorlagen) {
+		this.terminVorlagen = terminVorlagen;
+	}
+
+	public TeamMailSettings getWeeklyTeamMailSettings() {
+		return weeklyTeamMailSettings;
+	}
+
+	public void setWeeklyTeamMailSettings(TeamMailSettings weeklyTeamMailSettings) {
+		this.weeklyTeamMailSettings = weeklyTeamMailSettings;
+	}
+
+	public TeamSettings getTeamSettings() {
+		return teamSettings;
+	}
+
+	public void setTeamSettings(TeamSettings teamSettings) {
+		this.teamSettings = teamSettings;
 	}
 }

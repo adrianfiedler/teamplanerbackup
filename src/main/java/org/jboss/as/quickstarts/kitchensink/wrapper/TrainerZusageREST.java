@@ -20,4 +20,6 @@ public class TrainerZusageREST implements Serializable {
 	
 	public String displayName;
 	
+	public boolean autoSet;
+	
 }

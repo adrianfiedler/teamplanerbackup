@@ -20,4 +20,6 @@ public class SpielerZusageREST implements Serializable {
 	
 	public String displayName;
 	
+	public boolean autoSet;
+	
 }

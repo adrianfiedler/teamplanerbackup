@@ -20,6 +20,9 @@ import java.io.Serializable;
 import java.util.Date;
 
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -29,16 +32,13 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 public class LoginToken extends AbstractBaseEntity implements Serializable {
 
-	private String userId;
 	private String token;
     private Date timeOut;
     
-	public String getUserId() {
-		return userId;
-	}
-	public void setUserId(String userId) {
-		this.userId = userId;
-	}
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="user_ref")
+    private User user;
+    
 	public String getToken() {
 		return token;
 	}
@@ -50,5 +50,11 @@ public class LoginToken extends AbstractBaseEntity implements Serializable {
 	}
 	public void setTimeOut(Date timeOut) {
 		this.timeOut = timeOut;
+	}
+	public User getUser() {
+		return user;
+	}
+	public void setUser(User user) {
+		this.user = user;
 	}
 }

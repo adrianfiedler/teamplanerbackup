@@ -19,9 +19,11 @@ package org.jboss.as.quickstarts.kitchensink.model;
 import java.io.Serializable;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -33,14 +35,19 @@ public class Verein extends AbstractBaseEntity implements Serializable {
 
     private String name;
 
-    @OneToMany(fetch=FetchType.LAZY, mappedBy="verein")
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="verein", cascade={CascadeType.ALL})
     private List<Team> vereinsTeams;
     
-    @OneToMany(fetch=FetchType.LAZY, mappedBy="verein")
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="verein", cascade={CascadeType.ALL})
     private List<Ort> orte;
     
-    @OneToMany(fetch=FetchType.LAZY, mappedBy="verein")
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="verein", cascade={CascadeType.ALL})
     private List<User> user;
+    
+    private int gekaufteTeams;
+    
+    @OneToOne(fetch=FetchType.LAZY, mappedBy="verein", cascade={CascadeType.ALL})
+    private VereinModule module;
     
     public String getName() {
         return name;
@@ -56,5 +63,37 @@ public class Verein extends AbstractBaseEntity implements Serializable {
 
 	public void setVereinsTeams(List<Team> vereinsTeams) {
 		this.vereinsTeams = vereinsTeams;
+	}
+
+	public List<Ort> getOrte() {
+		return orte;
+	}
+
+	public void setOrte(List<Ort> orte) {
+		this.orte = orte;
+	}
+
+	public List<User> getUser() {
+		return user;
+	}
+
+	public void setUser(List<User> user) {
+		this.user = user;
+	}
+
+	public int getGekaufteTeams() {
+		return gekaufteTeams;
+	}
+
+	public void setGekaufteTeams(int gekaufteTeams) {
+		this.gekaufteTeams = gekaufteTeams;
+	}
+
+	public VereinModule getModule() {
+		return module;
+	}
+
+	public void setModule(VereinModule module) {
+		this.module = module;
 	}
 }

@@ -15,4 +15,5 @@ public class VereinREST implements Serializable {
 	public String name;
 	public String id;
 	public List<TeamREST> teams;
+	public int gekaufteTeams;
 }

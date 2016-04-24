@@ -9,6 +9,7 @@ import org.jboss.as.quickstarts.kitchensink.model.TeamRolle;
 import org.jboss.as.quickstarts.kitchensink.model.Termin;
 import org.jboss.as.quickstarts.kitchensink.model.TerminVorlage;
 import org.jboss.as.quickstarts.kitchensink.model.User;
+import org.jboss.as.quickstarts.kitchensink.model.Verein;
 import org.jboss.as.quickstarts.kitchensink.model.Zusage;
 import org.jboss.as.quickstarts.kitchensink.wrapper.ResponseREST;
 
@@ -70,7 +71,11 @@ public class Helper {
 	public static boolean checkIfTerminNeedsTerminReminder(Termin termin){
 		boolean reminderSet = false;
 		for(TeamRolle rolle : termin.getTeam().getRollen()){
-			if(rolle.getRolle().equals(Constants.TRAINER_ROLE) && rolle.getUser().isTerminReminderMail()){
+			User user = rolle.getUser();
+			Verein verein = user.getVerein();
+			if(verein.getModule().isMailModul() && 
+					rolle.getRolle().equals(Constants.TRAINER_ROLE) && 
+					user.isTerminReminderMail()){
 				reminderSet = true;
 				break;
 			}
@@ -146,5 +151,24 @@ public class Helper {
 			case 6: return Calendar.SUNDAY;
 			default: return -1;
 		}
+	}
+	
+	public static String getZusageStringFromStatus(int zusageStatus){
+		switch(zusageStatus){
+			case Constants.ABGESAGT: return "Abgesagt";
+			case Constants.ZUGESAGT: return "Zugesagt";
+			case Constants.VIELLEICHT: return "Vielleicht";
+			default: return "";
+		}
+	}
+
+	public static int getRollenCountInTeam(Team team, String rolle) {
+		int rollenCount = 0;
+		for(TeamRolle teamRolle : team.getRollen()){
+			if(teamRolle.getRolle().equals(rolle)){
+				rollenCount++;
+			}
+		}
+		return rollenCount;
 	}
 }

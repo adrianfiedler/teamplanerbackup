@@ -36,6 +36,10 @@ import org.jboss.as.quickstarts.kitchensink.model.TeamRolle_;
 import org.jboss.as.quickstarts.kitchensink.model.Team_;
 import org.jboss.as.quickstarts.kitchensink.model.User;
 import org.jboss.as.quickstarts.kitchensink.model.User_;
+import org.jboss.as.quickstarts.kitchensink.model.Verein;
+import org.jboss.as.quickstarts.kitchensink.model.VereinModule;
+import org.jboss.as.quickstarts.kitchensink.model.VereinModule_;
+import org.jboss.as.quickstarts.kitchensink.model.Verein_;
 
 // The @Stateless annotation eliminates the need for manual transaction demarcation
 @Stateless
@@ -80,8 +84,13 @@ public class UserService {
     public List<User> findAllWeeklyNotifiedUsers() {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<User> criteria = cb.createQuery(User.class);
-        Root<User> User = criteria.from(User.class);
-        criteria.select(User).where(cb.isTrue(User.get(User_.weeklyStatusMail)));
+        Root<User> user = criteria.from(User.class);
+        Join<User, Verein> verein = user.join(User_.verein);
+        Join<Verein, VereinModule> module = verein.join(Verein_.module);
+        criteria.select(user).where(cb.and(
+        		cb.isTrue(user.get(User_.weeklyStatusMail)), 
+        		cb.isTrue(module.get(VereinModule_.mailModul))
+        	));
         List<User> users = em.createQuery(criteria).getResultList();
         return users;
     }

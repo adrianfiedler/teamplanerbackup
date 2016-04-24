@@ -28,10 +28,16 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 
 import org.jboss.as.quickstarts.kitchensink.model.LoginToken;
 import org.jboss.as.quickstarts.kitchensink.model.LoginToken_;
+import org.jboss.as.quickstarts.kitchensink.model.Team;
+import org.jboss.as.quickstarts.kitchensink.model.TeamRolle;
+import org.jboss.as.quickstarts.kitchensink.model.TeamRolle_;
+import org.jboss.as.quickstarts.kitchensink.model.User;
+import org.jboss.as.quickstarts.kitchensink.model.User_;
 
 // The @Stateless annotation eliminates the need for manual transaction demarcation
 @Stateless
@@ -43,7 +49,7 @@ public class LoginTokenService {
     @Inject
     private EntityManager em;
 
-    public LoginToken save(LoginToken loginToken) throws Exception {
+    public LoginToken save(LoginToken loginToken) {
         return em.merge(loginToken);
     }
     
@@ -55,7 +61,8 @@ public class LoginTokenService {
     	CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<LoginToken> criteria = cb.createQuery(LoginToken.class);
         Root<LoginToken> token = criteria.from(LoginToken.class);
-        criteria.select(token).where(cb.equal(token.get(LoginToken_.userId), userId));
+        Join<LoginToken, User> user = token.join(LoginToken_.user);
+        criteria.select(token).where(cb.equal(user.get(User_.id), userId));
         List<LoginToken> ergs = em.createQuery(criteria).getResultList();
         if(ergs == null || ergs.size() == 0){
         	return null;
@@ -64,55 +71,64 @@ public class LoginTokenService {
         }
     }
     
-    public LoginToken findTokenByTokenstring(String token){
+    public LoginToken findTokenByTokenstring(String tokenString){
     	CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<LoginToken> criteria = cb.createQuery(LoginToken.class);
         Root<LoginToken> tokenRoot = criteria.from(LoginToken.class);
-        criteria.select(tokenRoot).where(cb.equal(tokenRoot.get(LoginToken_.token), token));
-        return em.createQuery(criteria).getSingleResult();
-    }
-    
-    public String findUserIdByTokenId(String tokenId){
-        LoginToken loginToken = em.find(LoginToken.class, tokenId);
-        if(loginToken != null){
-        	return loginToken.getUserId();
-        } else{
+        criteria.select(tokenRoot).where(cb.equal(tokenRoot.get(LoginToken_.token), tokenString));
+        List<LoginToken> ergs = em.createQuery(criteria).getResultList();
+        if(ergs == null || ergs.size() == 0){
         	return null;
+        } else{
+        	return ergs.get(0);
         }
     }
     
-    public void delete(LoginToken loginToken) throws Exception {
+    public User findUserByTokenstring(String tokenString){
+    	CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<User> criteria = cb.createQuery(User.class);
+        Root<User> user = criteria.from(User.class);
+        Join<User, LoginToken> token = user.join(User_.loginToken);
+        criteria.select(user).where(cb.equal(token.get(LoginToken_.token), tokenString));
+        List<User> ergs = em.createQuery(criteria).getResultList();
+        if(ergs == null || ergs.size() == 0){
+        	return null;
+        } else{
+        	return ergs.get(0);
+        }
+    }
+    
+    public String findUserIdByTokenstring(String tokenString){
+    	CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<String> criteria = cb.createQuery(String.class);
+        Root<User> user = criteria.from(User.class);
+        Join<User, LoginToken> token = user.join(User_.loginToken);
+        criteria.select(user.get(User_.id)).where(cb.equal(token.get(LoginToken_.token), tokenString));
+        List<String> ergs = em.createQuery(criteria).getResultList();
+        if(ergs == null || ergs.size() == 0){
+        	return null;
+        } else{
+        	return ergs.get(0);
+        }
+    }
+    
+    public void delete(LoginToken loginToken) {
     	em.remove(loginToken);
     }
     
-    public LoginToken login(String userId) throws Exception{
-    	Calendar cal = Calendar.getInstance();
-    	cal.add(Calendar.HOUR_OF_DAY, 2);
-
-    	LoginToken loginToken = findTokenByUserId(userId);
-    	if(loginToken == null){
-    		loginToken = new LoginToken();
-    		loginToken.setUserId(userId);
-    	} 
-		loginToken.setTimeOut(cal.getTime());
-		loginToken.setToken(UUID.randomUUID().toString());
-
-		loginToken = save(loginToken);
-		return loginToken;
-    }
     
-    public boolean checkLoggedIn(String token){
-    	LoginToken loginToken = findTokenByTokenstring(token);
+    public User getUserIfLoggedIn(String tokenString){
+    	LoginToken loginToken = findTokenByTokenstring(tokenString);
     	if(loginToken != null){
-    		Date now = new Date();
-    		Date timeoutDate = loginToken.getTimeOut();
-    		if(timeoutDate.after(now)){
-    			return true;
-    		} else{
-    			return false;
+    		User user = loginToken.getUser();
+    		if(user != null){
+    			Date now = new Date();
+    			Date timeoutDate = loginToken.getTimeOut();
+    			if(timeoutDate.after(now)){
+    				return user;
+    			} 
     		}
-    	} else{
-    		return false;
-    	}
+    	} 
+    	return null;
     }
 }

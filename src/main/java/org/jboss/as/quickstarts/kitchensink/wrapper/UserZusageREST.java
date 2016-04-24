@@ -20,4 +20,6 @@ public class UserZusageREST implements Serializable {
 	
 	public String displayName;
 	
+	public boolean autoSet;
+	
 }	

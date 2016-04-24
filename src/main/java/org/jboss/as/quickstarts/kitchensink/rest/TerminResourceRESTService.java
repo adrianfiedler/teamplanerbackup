@@ -34,6 +34,7 @@ import org.jboss.as.quickstarts.kitchensink.model.User;
 import org.jboss.as.quickstarts.kitchensink.model.UserSettings;
 import org.jboss.as.quickstarts.kitchensink.model.Verein;
 import org.jboss.as.quickstarts.kitchensink.model.Zusage;
+import org.jboss.as.quickstarts.kitchensink.service.LoginTokenService;
 import org.jboss.as.quickstarts.kitchensink.service.OrtService;
 import org.jboss.as.quickstarts.kitchensink.service.TeamService;
 import org.jboss.as.quickstarts.kitchensink.service.TerminService;
@@ -42,10 +43,11 @@ import org.jboss.as.quickstarts.kitchensink.service.VereinService;
 import org.jboss.as.quickstarts.kitchensink.service.ZusageService;
 import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
+import org.jboss.as.quickstarts.kitchensink.util.ResponseTypes;
 import org.jboss.as.quickstarts.kitchensink.wrapper.OrtREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.TerminREST;
-import org.jboss.as.quickstarts.kitchensink.wrapper.TerminRequestREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.TerminVorlageREST;
+import org.jboss.as.quickstarts.kitchensink.wrapper.request.TerminRequestREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.util.WrapperUtil;
 
 import de.masalis.teamplanner.mail.SendMail;
@@ -83,26 +85,33 @@ public class TerminResourceRESTService {
 
 	@Inject
 	SendMail sendMailService;
+	
+	@Inject
+	LoginTokenService loginTokenService;
 
 	// Soodle detail
 	@GET
 	@Path("/byId")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response lookupTerminById(@QueryParam("id") String terminId, @QueryParam("userId") String userId) {
+	public Response lookupTerminById(@QueryParam("id") String terminId, @QueryParam("userId") String token) {
 		Response.ResponseBuilder builder = null;
-		Termin termin = terminService.findById(terminId);
-		User user = userService.findById(userId);
-		if(user == null){
-			builder = Response.ok(Helper.createResponse("ERROR", "USER ID NOT FOUND", null));
-		} else{
-			if (termin == null) {
-				builder = Response.ok(Helper.createResponse("ERROR", "TERMIN ID NOT FOUND", null));
-			} else {
-				Termin nextTermin = terminService.findNextTermin(termin, user);
-				Termin prevTermin = terminService.findPreviousTermin(termin, user);
-				builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(termin, userId, prevTermin, nextTermin)));
-			}
-		}
+		if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		Termin termin = terminService.findById(terminId);
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if(user == null){
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if (termin == null) {
+    				builder = Response.ok(Helper.createResponse("ERROR", "TERMIN ID NOT FOUND", null));
+    			} else {
+    				Termin nextTermin = terminService.findNextTermin(termin, user);
+    				Termin prevTermin = terminService.findPreviousTermin(termin, user);
+    				builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(termin, user.getId(), prevTermin, nextTermin)));
+    			}
+    		}
+    	}
 		
 		return builder.build();
 	}
@@ -111,18 +120,27 @@ public class TerminResourceRESTService {
 	@Path("/forTeamIds")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response lookupTermineByTeamIds(@QueryParam("ids") List<String> teamIds,
-			@QueryParam("userId") String userId) {
+			@QueryParam("userId") String token) {
 		Response.ResponseBuilder builder = null;
-		List<Termin> termine = terminService.findByTeamIds(teamIds);
-		if (termine == null) {
-			builder = Response.status(Status.NO_CONTENT);
-		} else {
-			List<TerminREST> erg = new ArrayList<TerminREST>(termine.size());
-			for (Termin t : termine) {
-				erg.add(WrapperUtil.createRest(t, userId, null, null));
-			}
-			builder = Response.ok(erg);
-		}
+		if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if(user == null){
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			List<Termin> termine = terminService.findByTeamIds(teamIds);
+    			if (termine == null) {
+    				builder = Response.status(Status.NO_CONTENT);
+    			} else {
+    				List<TerminREST> erg = new ArrayList<TerminREST>(termine.size());
+    				for (Termin t : termine) {
+    					erg.add(WrapperUtil.createRest(t, user.getId(), null, null));
+    				}
+    				builder = Response.ok(erg);
+    			}
+    		}
+    	}
 
 		return builder.build();
 	}
@@ -131,27 +149,31 @@ public class TerminResourceRESTService {
 	@GET
 	@Path("/forUserInDates")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response lookupTermineByUserAndDates(@QueryParam("id") String userId,
+	public Response lookupTermineByUserAndDates(@QueryParam("id") String token,
 			@QueryParam("startDate") String startDateString, @QueryParam("endDate") String endDateString) {
 		Response.ResponseBuilder builder = null;
-		Date startDate = new Date(Long.parseLong(startDateString));
-		Date endDate = new Date(Long.parseLong(endDateString));
-		User user = userService.findById(userId);
-		if (user == null) {
-			builder = Response.ok(Helper.createResponse("ERROR", "USER ID NOT FOUND", null));
-		} else {
-			List<Termin> termine = terminService.findByTeamIdsAndDates(Helper.getTeamIdsForUser(user), startDate,
-					endDate);
-			if (termine == null) {
-				builder = Response.ok(Helper.createResponse("ERROR", "NO TERMINE", null));
-			} else {
-				List<TerminREST> erg = new ArrayList<TerminREST>(termine.size());
-				for (Termin t : termine) {
-					erg.add(WrapperUtil.createRest(t, userId, null, null));
-				}
-				builder = Response.ok(Helper.createResponse("SUCCESS", "", erg));
-			}
-		}
+		if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		Date startDate = new Date(Long.parseLong(startDateString));
+    		Date endDate = new Date(Long.parseLong(endDateString));
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if (user == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else {
+    			List<Termin> termine = terminService.findByTeamIdsAndDates(Helper.getTeamIdsForUser(user), startDate,
+    					endDate);
+    			if (termine == null) {
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO TERMINE", null));
+    			} else {
+    				List<TerminREST> erg = new ArrayList<TerminREST>(termine.size());
+    				for (Termin t : termine) {
+    					erg.add(WrapperUtil.createRest(t, user.getId(), null, null));
+    				}
+    				builder = Response.ok(Helper.createResponse("SUCCESS", "", erg));
+    			}
+    		}
+    	}
 		return builder.build();
 	}
 
@@ -163,65 +185,69 @@ public class TerminResourceRESTService {
 		Response.ResponseBuilder builder = null;
 
 		int terminCount = 0;
-		try {
-			// Check user Rechte
-			builder = checkUserCreateTerminPrivileg(terminRest);
-			if (builder != null) {
-				// keine Rechte
-				return builder.build();
-			}
+		// Check user Rechte
+		builder = checkUserCreateTerminPrivileg(terminRest);
+		if (builder != null) {
+			// keine Rechte
+			return builder.build();
+		}
 
-			Ort ort = this.getOrCreateOrt(terminRest);
+		Ort ort = this.getOrCreateOrt(terminRest);
 
-			Date terminDatum = new Date(Long.parseLong(terminRest.datum) * 1000);
-			Date terminEndDatum = null;
-			Calendar cStart = Calendar.getInstance();
-			cStart.setTime(terminDatum);
-			Calendar cEnd = Calendar.getInstance();
-			cEnd.setTime(terminDatum);
+		Date terminDatum = new Date(Long.parseLong(terminRest.datum) * 1000);
+		Date now = new Date();
+		if(terminDatum.before(now)){
+			return Response.ok(Helper.createResponse("ERROR", "TERMIN IN PAST", "")).build();
+		}
+		Date terminEndDatum = null;
+		Calendar cStart = Calendar.getInstance();
+		cStart.setTime(terminDatum);
+		Calendar cEnd = Calendar.getInstance();
+		cEnd.setTime(terminDatum);
 
-			Serie serie = null;
-			if (terminRest.serie != null && terminRest.serie.intervall != 0 && terminRest.serie.serieEndDate != null) {
-				terminEndDatum = new Date(Long.parseLong(terminRest.serie.serieEndDate) * 1000);
-				cEnd.setTime(terminEndDatum);
-				serie = new Serie();
-				serie.setIntervall(terminRest.serie.intervall);
-				serie.setTermine(new ArrayList<Termin>());
-			}
-			cEnd.add(Calendar.SECOND, 1);
-			Date endDate = cEnd.getTime();
+		Serie serie = null;
+		if (terminRest.serie != null && terminRest.serie.intervall != 0 && terminRest.serie.serieEndDate != null) {
+			terminEndDatum = new Date(Long.parseLong(terminRest.serie.serieEndDate) * 1000);
+			cEnd.setTime(terminEndDatum);
+			serie = new Serie();
+			serie.setIntervall(terminRest.serie.intervall);
+			serie.setTermine(new ArrayList<Termin>());
+		}
+		cEnd.add(Calendar.SECOND, 1);
+		Date endDate = cEnd.getTime();
 
-			Calendar cCurrent = Calendar.getInstance();
-			cCurrent.setTime(cStart.getTime());
-			Date currentDate = cCurrent.getTime();
-			boolean firstTermin = true;
-			while (currentDate.before(endDate)) {
-				Termin termin = null;
-				if (terminRest.terminId != null) {
-					termin = terminService.findById(terminRest.terminId);
-					if (termin == null) {
-						return Response.ok(Helper.createResponse("ERROR", "TERMIN ID DOES NOT EXIST", "")).build();
-					}
-				} else {
-					termin = new Termin();
-					termin = terminService.save(termin);
+		Calendar cCurrent = Calendar.getInstance();
+		cCurrent.setTime(cStart.getTime());
+		Date currentDate = cCurrent.getTime();
+		boolean firstTermin = true;
+		while (currentDate.before(endDate)) {
+			Termin termin = null;
+			if (terminRest.terminId != null) {
+				termin = terminService.findById(terminRest.terminId);
+				if (termin == null) {
+					return Response.ok(Helper.createResponse("ERROR", "TERMIN ID DOES NOT EXIST", "")).build();
 				}
-				termin.setOrt(ort);
-				ort.getTermine().add(termin);
-				ort = ortService.save(ort);
-				termin.setStatus(1);
-				termin.setBeschreibung(terminRest.beschreibung);
-				termin.setMaybeAllowed(terminRest.maybeAllowed);
-				termin.setName(terminRest.name);
-				termin.setDatum(currentDate);
-				termin.setDefaultZusageStatus(terminRest.defaultZusageStatus);
+			} else {
+				termin = new Termin();
 				termin = terminService.save(termin);
+			}
+			termin.setOrt(ort);
+			ort.getTermine().add(termin);
+			ort = ortService.save(ort);
+			termin.setStatus(1);
+			termin.setBeschreibung(terminRest.beschreibung);
+			termin.setMaybeAllowed(terminRest.maybeAllowed);
+			termin.setName(terminRest.name);
+			termin.setDatum(currentDate);
+			termin.setDefaultZusageStatus(terminRest.defaultZusageStatus);
+			termin = terminService.save(termin);
 
-				Team team = teamService.findById(terminRest.teamId);
-				termin.setTeam(team);
-				team.getTermine().add(termin);
-				teamService.save(team);
+			Team team = teamService.findById(terminRest.teamId);
+			termin.setTeam(team);
+			team.getTermine().add(termin);
+			teamService.save(team);
 
+			if(terminRest.terminId == null){ // Zusagen und Serie nur bei neuem Termin erstellen
 				List<Zusage> zusagen = new ArrayList<Zusage>();
 				List<User> persons = userService.findUsersByTeamId(terminRest.teamId);
 				if (persons != null) {
@@ -236,38 +262,38 @@ public class TerminResourceRESTService {
 						zusageService.save(zusage);
 					}
 				}
+				termin.setZusagen(zusagen);
 				if (serie != null) {
 					termin.setSerie(serie);
 					serie.getTermine().add(termin);
 					serie = terminService.saveSerie(serie);
 				}
-				termin.setZusagen(zusagen);
-				termin = terminService.save(termin);
-				terminCount++;
-
-				TerminVorlage existingVorlage = terminService.getTerminVorlageById(terminRest.vorlageId);
+			}
+			
+			if(terminRest.vorlage == true && firstTermin == true){
+				//TerminVorlage nur speichern, wenn erster Termin einer Serie und Vorlage veraendert oder null
+				TerminVorlage existingVorlage = terminService.getTerminVorlageByVorlageValues(terminRest.name, terminRest.beschreibung, terminRest.teamId);
 				boolean terminVorlageNullOrChanged = checkTerminVorlageNullOrChanged(existingVorlage, termin);
 				if (terminRest.vorlage && firstTermin && terminVorlageNullOrChanged) {
 					TerminVorlage terminVorlage = Helper.createVorlage(termin);
 					terminService.saveVorlage(terminVorlage);
 				}
+			}
+			
+			//abschluss
+			termin = terminService.save(termin);
+			terminCount++;
+			if (terminRest.serie != null && terminRest.serie.intervall != 0
+					&& terminRest.serie.serieEndDate != null) {
+				cCurrent.add(Calendar.DATE, terminRest.serie.intervall);
+				currentDate = cCurrent.getTime();
+			} else {
+				currentDate = endDate;
+			}
+			firstTermin = false;
+		} // end while create termin cycle
 
-				if (terminRest.serie != null && terminRest.serie.intervall != 0
-						&& terminRest.serie.serieEndDate != null) {
-					cCurrent.add(Calendar.DATE, terminRest.serie.intervall);
-					currentDate = cCurrent.getTime();
-				} else {
-					currentDate = endDate;
-				}
-				firstTermin = false;
-			} // end while create termin cycle
-
-			builder = Response.ok(Helper.createResponse("SUCCESS", "", "CREATED TERMINE: " + terminCount));
-		} catch (Exception e) {
-			StringWriter errors = new StringWriter();
-			e.printStackTrace(new PrintWriter(errors));
-			builder = Response.ok(Helper.createResponse("ERROR", "COULD NOT CREATE TERMIN", errors.toString()));
-		}
+		builder = Response.ok(Helper.createResponse("SUCCESS", "", "CREATED TERMINE: " + terminCount));
 		return builder.build();
 	}
 	
@@ -309,8 +335,6 @@ public class TerminResourceRESTService {
 				|| terminMinute != vorlageMinute
 				|| !existingVorlage.getName().equals(termin.getName())
 				|| !existingOrt.getBeschreibung().equals(gesendeterOrt.getBeschreibung())
-				|| !existingOrt.getLatitude().equals(gesendeterOrt.getLatitude())
-				|| !existingOrt.getLongitude().equals(gesendeterOrt.getLongitude())
 				|| !existingOrt.getNummer().equals(gesendeterOrt.getNummer())
 				|| !existingOrt.getPlz().equals(gesendeterOrt.getPlz())
 				|| !existingOrt.getStadt().equals(gesendeterOrt.getStadt())
@@ -326,8 +350,7 @@ public class TerminResourceRESTService {
 		OrtREST ortRest = terminRest.ort;
 		if (terminRest.ort != null && terminRest.ort.id != null && ortService.findById(terminRest.ort.id) != null) {
 			ort = ortService.findById(terminRest.ort.id);
-			if (ort.getBeschreibung().equals(ortRest.beschreibung) && ort.getLatitude().equals(ortRest.latitude)
-					&& ort.getLongitude().equals(ortRest.longitude) && ort.getNummer().equals(ortRest.nummer)
+			if (ort.getBeschreibung().equals(ortRest.beschreibung) && ort.getNummer().equals(ortRest.nummer)
 					&& ort.getPlz().equals(ortRest.plz) && ort.getStadt().equals(ortRest.stadt)
 					&& ort.getStrasse().equals(ortRest.strasse) ) {
 				if(ortRest.vorlage){
@@ -351,79 +374,100 @@ public class TerminResourceRESTService {
 		ort.setVereinId(verein.getId());
 		ort.setTermine(new ArrayList<Termin>());
 		ort.setVerein(verein);
-		try {
-			ort = ortService.save(ort);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		ort = ortService.save(ort);
 		return ort;
 	}
 
 	private ResponseBuilder checkUserCreateTerminPrivileg(TerminRequestREST terminRest) {
-		if (terminRest.userId == null || terminRest.teamId == null) {
-			return Response.ok(Helper.createResponse("ERROR", "NO USER OR TEAM SET", ""));
-		} else {
-			User user = userService.findById(terminRest.userId);
-			Team team = teamService.findById(terminRest.teamId);
-			if (user != null && team != null) {
-				for (int i = 0; i < user.getRollen().size(); i++) {
-					TeamRolle userRolle = user.getRollen().get(i);
-					if (userRolle.getTeam().getId().equals(terminRest.teamId)) {
-						if (userRolle.getRolle().equals(Constants.TRAINER_ROLE)) {
-							// ok
-							return null;
-						} else {
-							return Response.ok(Helper.createResponse("ERROR", "NO TRAINER RIGHTS", ""));
-						}
-					}
-				}
-				return Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM", ""));
-			} else {
-				return Response.ok(Helper.createResponse("ERROR", "NO USER OR TEAM FOUND", ""));
-			}
-		}
+		if(terminRest.userId == null || terminRest.userId.length() == 0){
+    		return Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User user = loginTokenService.getUserIfLoggedIn(terminRest.userId);
+    		if(user == null){
+    			return Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if (terminRest.teamId == null) {
+    				return Response.ok(Helper.createResponse("ERROR", "NO USER OR TEAM SET", ""));
+    			} else {
+    				Team team = teamService.findById(terminRest.teamId);
+    				if (team != null) {
+    					for (int i = 0; i < user.getRollen().size(); i++) {
+    						TeamRolle userRolle = user.getRollen().get(i);
+    						if (userRolle.getTeam().getId().equals(terminRest.teamId)) {
+    							if (userRolle.getRolle().equals(Constants.TRAINER_ROLE)) {
+    								// ok
+    								return null;
+    							} else {
+    								return Response.ok(Helper.createResponse("ERROR", "NO TRAINER RIGHTS", ""));
+    							}
+    						}
+    					}
+    					return Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM", ""));
+    				} else {
+    					return Response.ok(Helper.createResponse("ERROR", "NO USER OR TEAM FOUND", ""));
+    				}
+    			}
+    		}
+    	}
 	}
 
 	// set user status of termin
 	@POST
 	@Path("/userStatus")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response setUserStatus(@FormParam("userId") String userId, @FormParam("terminId") String terminId,
+	public Response setUserStatus(@FormParam("userId") String token, @FormParam("terminId") String terminId,
 			@FormParam("status") String status, @FormParam("kommentar") String kommentar) {
 		Response.ResponseBuilder builder = null;
-		if (userId == null || terminId == null) {
-			builder = Response.ok(Helper.createResponse("ERROR", "PARAMETER IS NULL", null));
-			return builder.build();
-		}
-		Termin termin = terminService.findById(terminId);
-		User user = userService.findById(userId);
-		if (termin == null || user == null) {
-			builder = Response.ok(Helper.createResponse("ERROR", "USER ID OR TERMIN ID NOT FOUND", null));
-		} else {
-			if (termin.getZusagen() != null) {
-				boolean set = false;
-				for (Zusage zusage : termin.getZusagen()) {
-					if (zusage.getUser().getId() == user.getId()) {
-						if (status != null) {
-							zusage.setStatus(Integer.parseInt(status));
-						}
-						if (kommentar != null) {
-							zusage.setKommentar(kommentar);
-						}
-						zusage.setAutoSet(false);
-						terminService.updateZusage(zusage);
-						set = true;
-						break;
-					}
-				}
-				if (set) {
-					termin = terminService.findById(terminId);
-					builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(termin, userId, null, null)));
-				} else {
-					builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TERMIN", null));
-				}
-			}
-		}
+		if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		if (terminId == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", "PARAMETER IS NULL", null));
+    			return builder.build();
+    		}
+    		Termin termin = terminService.findById(terminId);
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		if(user == null){
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if (termin == null) {
+    				builder = Response.ok(Helper.createResponse("ERROR", "USER ID OR TERMIN ID NOT FOUND", null));
+    			} else {
+    				Date now = new Date();
+    				if(termin.getDatum().before(now)){
+    					builder = Response.ok(Helper.createResponse("ERROR", "TERMIN IN PAST", null));
+    				} else{
+    					if (termin.getZusagen() != null) {
+        					boolean set = false;
+        					for (Zusage zusage : termin.getZusagen()) {
+        						if (zusage.getUser().getId() == user.getId()) {
+        							if (status != null && status.length() > 0) {
+        								int iStatus = Integer.parseInt(status);
+        								if(iStatus == Constants.VIELLEICHT && !termin.isMaybeAllowed()){
+        									iStatus = Constants.ZUGESAGT;
+        								}
+        								zusage.setStatus(iStatus);
+        							}
+        							if (kommentar != null) {
+        								zusage.setKommentar(kommentar);
+        							}
+        							zusage.setAutoSet(false);
+        							terminService.updateZusage(zusage);
+        							set = true;
+        							break;
+        						}
+        					}
+        					if (set) {
+        						termin = terminService.findById(terminId);
+        						builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(termin, user.getId(), null, null)));
+        					} else {
+        						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TERMIN", null));
+        					}
+        				}
+    				}
+    			}
+    		}
+    	}
 		return builder.build();
 	}
 
@@ -431,44 +475,52 @@ public class TerminResourceRESTService {
 	@GET
 	@Path("/setStatus")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response setTerminStatus(@QueryParam("userId") String userId, @QueryParam("terminId") String terminId,
+	public Response setTerminStatus(@QueryParam("userId") String token, @QueryParam("terminId") String terminId,
 			@QueryParam("status") String status, @QueryParam("kommentar") String kommentar) {
 		Response.ResponseBuilder builder = null;
-		if (userId == null || terminId == null || status == null) {
-			builder = Response.ok(Helper.createResponse("ERROR", "PARAMETER IS NULL", null));
-			return builder.build();
-		}
-		Termin termin = terminService.findById(terminId);
-		User user = userService.findById(userId);
-
-		if (termin == null || user == null) {
-			builder = Response.ok(Helper.createResponse("ERROR", "USER ID OR TERMIN ID NOT FOUND", null));
-		} else {
-			Team team = termin.getTeam();
-			if (team == null) {
-				builder = Response.ok(Helper.createResponse("ERROR", "TEAM FOR TERMIN NOT FOUND", null));
-			} else {
-				boolean inTeamAndTrainer = Helper.checkIfUserInTeamAndTrainer(user, team);
-				if (!inTeamAndTrainer) {
-					builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM OR NOT TRAINER", null));
-				} else {
-					termin.setStatus(Integer.parseInt(status));
-					try {
-						terminService.save(termin);
-						builder = Response
-								.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(termin, userId, null, null)));
-						if (status.equals(Constants.TERMIN_STATUS_ABGESAGT)) {
-							sendMailService.sendEmailToTeam(termin.getTeam(), "Termin abgesagt", "Grund: " + kommentar);
-						} else if (status.equals(Constants.TERMIN_STATUS_FINDET_STATT)) {
-							sendMailService.sendEmailToTeam(termin.getTeam(), "Termin findet statt",
-									"Grund: " + kommentar);
-						}
-					} catch (Exception e) {
-						builder = Response.ok(Helper.createResponse("ERROR", "COULD NOT UPDATE TERMIN", null));
-					}
-				}
-			}
-		}
+		if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		if (terminId == null || status == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", "PARAMETER IS NULL", null));
+    			return builder.build();
+    		}
+    		Termin termin = terminService.findById(terminId);
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		
+    		if(user == null){
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if (termin == null) {
+    				builder = Response.ok(Helper.createResponse("ERROR", "USER ID OR TERMIN ID NOT FOUND", null));
+    			} else {
+    				Team team = termin.getTeam();
+    				if (team == null) {
+    					builder = Response.ok(Helper.createResponse("ERROR", "TEAM FOR TERMIN NOT FOUND", null));
+    				} else {
+    					boolean inTeamAndTrainer = Helper.checkIfUserInTeamAndTrainer(user, team);
+    					if (!inTeamAndTrainer) {
+    						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM OR NOT TRAINER", null));
+    					} else {
+    						termin.setStatus(Integer.parseInt(status));
+    						try {
+    							terminService.save(termin);
+    							builder = Response
+    									.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(termin, user.getId(), null, null)));
+    							if (status.equals(Constants.TERMIN_STATUS_ABGESAGT)) {
+    								sendMailService.sendEmailToTeam(termin.getTeam(), "Termin abgesagt", "Grund: " + kommentar);
+    							} else if (status.equals(Constants.TERMIN_STATUS_FINDET_STATT)) {
+    								sendMailService.sendEmailToTeam(termin.getTeam(), "Termin findet statt",
+    										"Grund: " + kommentar);
+    							}
+    						} catch (Exception e) {
+    							builder = Response.ok(Helper.createResponse("ERROR", "COULD NOT UPDATE TERMIN", null));
+    						}
+    					}
+    				}
+    			}
+    		}
+    	}
 		return builder.build();
 	}
 
@@ -476,30 +528,38 @@ public class TerminResourceRESTService {
 	@GET
 	@Path("/getVorlagen")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getTerminVorlagen(@QueryParam("userId") String userId, @QueryParam("teamId") String teamId) {
+	public Response getTerminVorlagen(@QueryParam("userId") String token, @QueryParam("teamId") String teamId) {
 		Response.ResponseBuilder builder = null;
-		if (userId == null || teamId == null) {
-			builder = Response.ok(Helper.createResponse("ERROR", "PARAMETER IS NULL", null));
-			return builder.build();
-		}
-		Team team = teamService.findById(teamId);
-		User user = userService.findById(userId);
-
-		if (team == null || user == null) {
-			builder = Response.ok(Helper.createResponse("ERROR", "USER ID OR TEAM ID NOT FOUND", null));
-		} else {
-			List<TerminVorlage> vorlagen = terminService.findVorlagenByTeamId(teamId);
-			if (vorlagen == null) {
-				builder = Response.ok(Helper.createResponse("ERROR", "NO VORLAGEN FOUND", null));
-			} else {
-				List<TerminVorlageREST> restList = new ArrayList<TerminVorlageREST>(vorlagen.size());
-				for (TerminVorlage vorlage : vorlagen) {
-					TerminVorlageREST rest = WrapperUtil.createRest(vorlage);
-					restList.add(rest);
-				}
-				builder = Response.ok(Helper.createResponse("SUCCESS", "", restList));
-			}
-		}
+		if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		if (teamId == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", "PARAMETER IS NULL", null));
+    			return builder.build();
+    		}
+    		Team team = teamService.findById(teamId);
+    		User user = loginTokenService.getUserIfLoggedIn(token);
+    		
+    		if(user == null){
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if (team == null) {
+    				builder = Response.ok(Helper.createResponse("ERROR", "USER ID OR TEAM ID NOT FOUND", null));
+    			} else {
+    				List<TerminVorlage> vorlagen = terminService.findVorlagenByTeamId(teamId);
+    				if (vorlagen == null) {
+    					builder = Response.ok(Helper.createResponse("ERROR", "NO VORLAGEN FOUND", null));
+    				} else {
+    					List<TerminVorlageREST> restList = new ArrayList<TerminVorlageREST>(vorlagen.size());
+    					for (TerminVorlage vorlage : vorlagen) {
+    						TerminVorlageREST rest = WrapperUtil.createRest(vorlage);
+    						restList.add(rest);
+    					}
+    					builder = Response.ok(Helper.createResponse("SUCCESS", "", restList));
+    				}
+    			}
+    		}
+    	}
 		return builder.build();
 	}
 	
@@ -507,22 +567,22 @@ public class TerminResourceRESTService {
 	@Path("/setzeUserStatusInZeitraum")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response setzeUserStatusInZeitraum(@FormParam("startDate") String startDateString, @FormParam("endDate") String endDateString, 
-			@FormParam("wochenTag") int wochenTag, @FormParam("userId") String userId, @FormParam("status") int status){
+			@FormParam("wochenTag") int wochenTag, @FormParam("userId") String token, @FormParam("status") int status){
 		Response.ResponseBuilder builder = null;
-		if (userId == null){
-			builder = Response.ok(Helper.createResponse("ERROR", "USER ID NOT SET", null));
+		if (token == null || token.length() == 0){
+			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
 		} else if (startDateString == null) {
 			builder = Response.ok(Helper.createResponse("ERROR", "START DATE NOT SET", null));
 		} else if (endDateString == null) {
 			builder = Response.ok(Helper.createResponse("ERROR", "END DATE NOT SET", null));
 		} else{
-			User user = userService.findById(userId);
+			User user = loginTokenService.getUserIfLoggedIn(token);
 			if(user == null){
-				builder = Response.ok(Helper.createResponse("ERROR", "USER ID NOT FOUND", null));
+				builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
 			} else{
 				Date startDate = new Date(Long.parseLong(startDateString) * 1000);
 				Date endDate = new Date(Long.parseLong(endDateString) * 1000);
-				List<Termin> termine = terminService.findByUserIdAndDates(userId, startDate, endDate);
+				List<Termin> termine = terminService.findByUserIdAndDates(user.getId(), startDate, endDate);
 				if(termine != null && termine.size() > 0){
 					for(Termin termin : termine){
 						Zusage zusage = Helper.getZusageFromUserInTermin(termin, user);

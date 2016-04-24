@@ -1,19 +1,3 @@
-/*
- * JBoss, Home of Professional Open Source
- * Copyright 2013, Red Hat, Inc. and/or its affiliates, and individual
- * contributors by the @authors tag. See the copyright.txt in the
- * distribution for a full listing of individual contributors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.jboss.as.quickstarts.kitchensink.service;
 
 import java.util.List;
@@ -25,11 +9,15 @@ import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Root;
 
-import org.jboss.as.quickstarts.kitchensink.model.Einladung;
 import org.jboss.as.quickstarts.kitchensink.model.Team;
+import org.jboss.as.quickstarts.kitchensink.model.TeamMailSettings;
+import org.jboss.as.quickstarts.kitchensink.model.TeamMailSettings_;
 import org.jboss.as.quickstarts.kitchensink.model.TeamRolle;
+import org.jboss.as.quickstarts.kitchensink.model.TeamSettings;
+import org.jboss.as.quickstarts.kitchensink.model.TeamSettings_;
 import org.jboss.as.quickstarts.kitchensink.model.Team_;
 
 // The @Stateless annotation eliminates the need for manual transaction demarcation
@@ -42,11 +30,11 @@ public class TeamService {
     @Inject
     private EntityManager em;
 
-    public void register(Team Team) throws Exception {
+    public void register(Team Team) {
         em.persist(Team);
     }
     
-    public Team save(Team Team) throws Exception {
+    public Team save(Team Team) {
         return em.merge(Team);
     }
     
@@ -84,4 +72,44 @@ public class TeamService {
     public void delete(Team team) throws Exception {
     	em.remove(team);
     }
+    
+    public TeamMailSettings findMailSettingsByTeamId(String teamId){
+    	CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<TeamMailSettings> criteria = cb.createQuery(TeamMailSettings.class);
+        Root<TeamMailSettings> mailSettings = criteria.from(TeamMailSettings.class);
+        Join<TeamMailSettings, Team> team = mailSettings.join(TeamMailSettings_.team);
+        criteria.select(mailSettings).where(cb.equal(team.get(Team_.id), teamId));
+        List<TeamMailSettings> ergs = em.createQuery(criteria).getResultList();
+        if(ergs == null || ergs.size() == 0){
+        	return null;
+        } else{
+        	return ergs.get(0);
+        }
+    }
+    
+    public TeamMailSettings findTeamMailSettingsById(String id) {
+        return em.find(TeamMailSettings.class, id);
+    }
+    
+    public TeamMailSettings saveTeamMailSettings(TeamMailSettings teamMailSettings) {
+        return em.merge(teamMailSettings);
+    }
+
+	public TeamSettings findTeamSettingsByTeamId(String teamId) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<TeamSettings> criteria = cb.createQuery(TeamSettings.class);
+        Root<TeamSettings> teamSettings = criteria.from(TeamSettings.class);
+        Join<TeamSettings, Team> team = teamSettings.join(TeamSettings_.team);
+        criteria.select(teamSettings).where(cb.equal(team.get(Team_.id), teamId));
+        List<TeamSettings> ergs = em.createQuery(criteria).getResultList();
+        if(ergs == null || ergs.size() == 0){
+        	return null;
+        } else{
+        	return ergs.get(0);
+        }
+	}
+
+	public TeamSettings saveTeamSettings(TeamSettings teamSettings) {
+		return em.merge(teamSettings);
+	}
 }

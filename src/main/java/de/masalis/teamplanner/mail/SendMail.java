@@ -54,7 +54,7 @@ public class SendMail {
 		message.setReplyTo(InternetAddress.parse(replyListBuilder.toString()));
 		message.setSubject(subject, "UTF-8");
 		//message.setText(content);
-		message.setContent(content, "text/html; charset=utf-8");
+		message.setContent(content.replaceAll("(\r\n|\n)", "<br />"), "text/html; charset=utf-8");
 
 		Transport.send(message);
 	}

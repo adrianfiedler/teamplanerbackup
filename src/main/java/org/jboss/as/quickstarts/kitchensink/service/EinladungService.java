@@ -47,11 +47,11 @@ public class EinladungService {
     @Inject
     private EntityManager em;
 
-    public void save(Einladung einladung) throws Exception {
+    public void save(Einladung einladung) {
         em.persist(einladung);
     }
     
-    public void delete(Einladung einladung) throws Exception {
+    public void delete(Einladung einladung) {
     	em.remove(einladung);
     }
     

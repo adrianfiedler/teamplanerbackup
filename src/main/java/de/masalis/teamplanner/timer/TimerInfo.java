@@ -9,6 +9,7 @@ public class TimerInfo implements Serializable {
 	private static final long serialVersionUID = 282355013488047087L;
 	private String terminId;
 	private String reminderId;
+	private String userId;
 
 	public String getTerminId() {
 		return terminId;
@@ -24,5 +25,13 @@ public class TimerInfo implements Serializable {
 
 	public void setReminderId(String reminderId) {
 		this.reminderId = reminderId;
+	}
+
+	public String getUserId() {
+		return userId;
+	}
+
+	public void setUserId(String userId) {
+		this.userId = userId;
 	}
 }
