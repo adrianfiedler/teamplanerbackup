@@ -31,19 +31,19 @@ insert into TeamRolle (id, rolle, user_ref, team_ref, inTeam) values (-3, 'Train
 
 insert into Ort (id, beschreibung, plz, stadt, strasse, nummer, vorlage, latitude, longitude, verein_ref) values (-1, 'Heim Halle', '81475', 'Muenchen', 'Herterichstrasse', '139', true, 48.080468, 11.499757,-1)
 insert into TerminVorlage (id, name, beschreibung, time, ort_ref, team_ref) values (-1, 'Training Vorlage', 'Beschreibung', '2015-10-24 18:00:00', -1, -1)
-insert into Termin (id, beschreibung, absageKommentar, datum, name, ort_ref, serie_ref, team_ref, status, maybeAllowed, defaultZusageStatus) values (-1, 'Training', NULL, '2016-04-23 08:00:00', 'Training', -1, NULL, -1, 1, true, 0)
+insert into Termin (id, beschreibung, absageKommentar, datum, name, ort_ref, serie_ref, team_ref, status, maybeAllowed, defaultZusageStatus) values (-1, 'Training', NULL, '2016-05-02 08:00:00', 'Training', -1, NULL, -1, 1, true, 0)
 insert into Zusage (id, kommentar, status, autoSet, user_ref, termin_ref) values (-1, 'Jules Kommentar 1', 0, false, -1, -1)
 insert into Zusage (id, kommentar, status, autoSet, user_ref, termin_ref) values (-2, 'Adrians Kommentar 1', 1, false, -2, -1)
 
-insert into Termin (id, beschreibung, absageKommentar, datum, name, ort_ref, serie_ref, team_ref, status, maybeAllowed, defaultZusageStatus) values (-2, 'Spiel 1', NULL, '2016-04-24 09:00:00', 'Spiel 1', -1, NULL, -1, 1, false, 0)
+insert into Termin (id, beschreibung, absageKommentar, datum, name, ort_ref, serie_ref, team_ref, status, maybeAllowed, defaultZusageStatus) values (-2, 'Spiel 1', NULL, '2016-05-03 09:00:00', 'Spiel 1', -1, NULL, -1, 1, false, 0)
 insert into Zusage (id, kommentar, status, autoSet, user_ref, termin_ref) values (-3, 'Jules Kommentar 2', 0, false, -1, -2)
 insert into Zusage (id, kommentar, status, autoSet, user_ref, termin_ref) values (-4, 'Adrians Kommentar 2', 1, false, -2, -2)
 
-insert into Termin (id, beschreibung, absageKommentar, datum, name, ort_ref, serie_ref, team_ref, status, maybeAllowed, defaultZusageStatus) values (-3, 'Spiel 2', NULL, '2016-04-25 10:00:00', 'Spiel 2', -1, NULL, -1, 1, true, 0)
+insert into Termin (id, beschreibung, absageKommentar, datum, name, ort_ref, serie_ref, team_ref, status, maybeAllowed, defaultZusageStatus) values (-3, 'Spiel 2', NULL, '2016-05-07 10:00:00', 'Spiel 2', -1, NULL, -1, 1, true, 0)
 insert into Zusage (id, kommentar, status, autoSet, user_ref, termin_ref) values (-5, 'Jules Kommentar 3', 0, false, -1, -3)
 insert into Zusage (id, kommentar, status, autoSet, user_ref, termin_ref) values (-6, 'Adrians Kommentar 3', 1, false, -2, -3)
 
-insert into Termin (id, beschreibung, absageKommentar, datum, name, ort_ref, serie_ref, team_ref, status, maybeAllowed, defaultZusageStatus) values (-4, 'Spiel Team 2', NULL, '2016-04-26 11:00:00', 'Spiel 1 team 2', -1, NULL, -2, 1, false, 0)
+insert into Termin (id, beschreibung, absageKommentar, datum, name, ort_ref, serie_ref, team_ref, status, maybeAllowed, defaultZusageStatus) values (-4, 'Spiel Team 2', NULL, '2016-05-10 11:00:00', 'Spiel 1 team 2', -1, NULL, -2, 1, false, 0)
 insert into Zusage (id, kommentar, status, autoSet, user_ref, termin_ref) values (-7, 'Termin Team 2 Kommentar Jule', 0, false, -1, -4)
 
 insert into TeamMailSettings (id, mailText, showMailText, showIntroduction, hoursBeforeTrainerReminder, team_ref) values (-1, 'Hier steht der MailText\nNeue Zeile', true, true, 2, -1)

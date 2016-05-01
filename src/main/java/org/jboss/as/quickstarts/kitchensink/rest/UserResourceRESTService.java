@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,11 +44,13 @@ import org.jboss.as.quickstarts.kitchensink.service.EinladungService;
 import org.jboss.as.quickstarts.kitchensink.service.LoginTokenService;
 import org.jboss.as.quickstarts.kitchensink.service.RollenService;
 import org.jboss.as.quickstarts.kitchensink.service.TeamService;
+import org.jboss.as.quickstarts.kitchensink.service.TerminService;
 import org.jboss.as.quickstarts.kitchensink.service.UserService;
 import org.jboss.as.quickstarts.kitchensink.service.ZusageService;
 import org.jboss.as.quickstarts.kitchensink.util.CipherUtil;
 import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
+import org.jboss.as.quickstarts.kitchensink.util.MailTexts;
 import org.jboss.as.quickstarts.kitchensink.util.ResponseTypes;
 import org.jboss.as.quickstarts.kitchensink.wrapper.UserREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.UserSettingsREST;
@@ -93,6 +96,8 @@ public class UserResourceRESTService {
     
     @Resource
     private EJBContext context;
+    
+    @Inject TerminService terminService;
     
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -240,8 +245,13 @@ public class UserResourceRESTService {
                 List<String> emailList = new ArrayList<String>();
                 emailList.add(email);
                 try{
-                	sendMailService.sendEmail(emailList, "Willkommen bei TeamPlanner", "Um deine Aktivierung abzuschließen, hier klicken: "
-                		+ "<a href='"+Constants.ACTIVATION_URL+"?activationToken="+encodedToken+"'>Aktivierung</a>", null);
+                	sendMailService.sendEmail(emailList, "Willkommen beim TeamPlaner", "Hallo "+vorname+",<br /><br />"
+                			+ "herzlich willkommen beim Teamplaner!<br />"
+                			+ "Vielen Dank für die Registrierung.<br />"
+                			+ "Bitte aktiviere deine Email mit Klick auf folgenden Link: "
+                		+ "<p><a href='"+Constants.ACTIVATION_URL+"?activationToken="+encodedToken+"'>Aktivierung</a></p>"
+                				+ "Dein Teamplaner-Team<br />"
+                				+ MailTexts.SUPPORT_TEXT, null);
                 } catch(MessagingException messagingException){
                 	// could not send mail : rollback
                 	context.setRollbackOnly();
@@ -275,7 +285,11 @@ public class UserResourceRESTService {
     		if(existingUser.getEmail() != null){
     			List<String> emailList = new ArrayList<String>();
                 emailList.add(existingUser.getEmail());
-    			sendMailService.sendEmail(emailList, "Deine Aktivierung bei TeamPlanner", "Dein Accout wurde erfolgreich aktiviert. Du kannst dich jetz hier einloggen: <a href='"+Constants.LOGIN_URL+"'>TeamPlanner Login</a>", null);
+    			sendMailService.sendEmail(emailList, "Deine Aktivierung bei TeamPlaner", "Hallo "+existingUser.getVorname()+",<br /><br />"
+    					+ "dein Accout bei TeamPlaner wurde erfolgreich aktiviert. Vielen Dank! Du kannst dich jetzt hier einloggen: "
+    					+ "<p><a href='"+Constants.LOGIN_URL+"'>TeamPlaner Login</a></p>"
+    							+ "Dein Teamplaner-Team<br />"
+    							+ MailTexts.SUPPORT_TEXT, null);
     			builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     		} else{
     			builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
@@ -326,14 +340,21 @@ public class UserResourceRESTService {
     										List<String> emailList = new ArrayList<String>();
     										String encryptedInvitationId = CipherUtil.encrypt(einladung.getId());
     										emailList.add(email);
-    										sendMailService.sendEmail(emailList, "Du wurdest zu TeamPlaner eingeladen",
+    										sendMailService.sendEmail(emailList, "Du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zu TeamPlaner eingeladen",
     												"Hallo " + vorname + " " + name + ",<br /><br />" +
-    														"Du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zum Team "+team.getName()+" in TeamPlaner eingeladen."
-    														+ "<br />Um diesem Team beizutreten, logge dich unter folgendem Link ein oder registriere dich hier: <a href='"+Constants.LOGIN_URL+"?id="+URLEncoder.encode(encryptedInvitationId, "UTF-8")+"'>TeamPlanner Login</a>", null);
+    														"du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zum Team <b>"+team.getName()+"</b> in TeamPlaner eingeladen."
+    														+ "<br />Um diesem Team beizutreten, logge dich unter folgendem Link ein oder registriere dich hier: "
+    														+ "<p><a href='"+Constants.LOGIN_URL+"?id="+URLEncoder.encode(encryptedInvitationId, "UTF-8")+"'>TeamPlaner Login</a></p>"
+    																+ "TeamPlaner ist ein plattformunabhängiges Tool zum Verwalten von Teams und Terminen. Und das Beste: Es ist kostenlos für dich!<br />"
+    																+ "Also nimm die Einladung an und sei mit dabei!<br />"
+    																+ MailTexts.SUPPORT_TEXT, null);
     										builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-    									} catch (MessagingException e) {
-    										builder = Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null));
-    									} catch (Exception e) {
+    									} catch(MessagingException messagingException){
+    					                	// could not send mail : rollback
+    					                	context.setRollbackOnly();
+    					                	return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
+    					                } catch (Exception e) {
+    					                	context.setRollbackOnly();
     										builder = Response.ok(Helper.createResponse("ERROR", "DATABASE SAVE ERROR", null));
     									} 
     								} else{
@@ -402,9 +423,11 @@ public class UserResourceRESTService {
 					try {
 						sendMailService.sendEmail(emailList, "Dein neues Teamplaner Passwort", "Hallo "+existingUser.getVorname()+",<br /><br />Dein neues Passwort lautet: "+newPw+"<br /><br />Du kannst dich damit unter <a href=\""+Constants.LOGIN_URL+"\">Teamplaner login</a> einloggen.", null);
 						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-					} catch (MessagingException e) {
-						builder = Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null));
-					}
+					} catch(MessagingException messagingException){
+	                	// could not send mail : rollback
+	                	context.setRollbackOnly();
+	                	return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
+	                }
 				} else{
 	    			builder = Response.ok(Helper.createResponse("ERROR", "USER MAIL NOT ACTIVATED", null));
 	    		}
@@ -438,6 +461,25 @@ public class UserResourceRESTService {
     				newUserSettings.setSamstagsAbsagen(userSettings.samstagsAbsagen);
     				newUserSettings.setSonntagsAbsagen(userSettings.sonntagsAbsagen);
     				user.setUserSettings(newUserSettings);
+    				
+    				List<Termin> termine = terminService.findByUserIdAndStartDate(user.getId(), new Date());
+    				if(termine != null){
+    					Calendar terminCal = Calendar.getInstance();
+    					for(Termin termin : termine){
+    						terminCal.setTime(termin.getDatum());
+    						int terminDay = terminCal.get(Calendar.DAY_OF_WEEK);
+    						if((terminDay == Calendar.MONDAY && userSettings.montagsAbsagen)
+    								||(terminDay == Calendar.TUESDAY && userSettings.dienstagsAbsagen)
+    								||(terminDay == Calendar.WEDNESDAY && userSettings.mittwochsAbsagen)
+    								||(terminDay == Calendar.THURSDAY && userSettings.donnerstagsAbsagen)
+    								||(terminDay == Calendar.FRIDAY && userSettings.freitagsAbsagen)
+    								||(terminDay == Calendar.SATURDAY && userSettings.samstagsAbsagen)
+    								||(terminDay == Calendar.SUNDAY && userSettings.sonntagsAbsagen)){
+    							Zusage zusage = Helper.getZusageFromUserInTermin(termin, user);
+    							zusage.setStatus(Constants.ABGESAGT);
+    						}
+    					}
+    				}
     				user = userService.update(user);
     				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     			}
@@ -490,12 +532,20 @@ public class UserResourceRESTService {
 						String encodedToken = URLEncoder.encode(aktivierToken, "UTF-8");
 						List<String> emailList = new ArrayList<String>();
 						emailList.add(user.getEmail());
-						sendMailService.sendEmail(emailList, "Willkommen bei TeamPlanner", "Um deine Aktivierung abzuschließen, hier klicken: "
-								+ "<a href='"+Constants.ACTIVATION_URL+"?activationToken="+encodedToken+"'>Aktivierung</a>", null);
+						sendMailService.sendEmail(emailList, "Willkommen beim TeamPlaner", "Hallo "+user.getVorname()+",<br /><br />"
+	                			+ "herzlich willkommen beim Teamplaner!<br />"
+	                			+ "Vielen Dank für die Registrierung.<br />"
+	                			+ "Bitte aktiviere deine Email mit Klick auf folgenden Link: "
+	                		+ "<p><a href='"+Constants.ACTIVATION_URL+"?activationToken="+encodedToken+"'>Aktivierung</a></p>"
+	                				+ "Dein Teamplaner-Team<br />"
+	                				+ MailTexts.SUPPORT_TEXT, null);
 						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-					} catch (MessagingException e) {
-						return Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null)).build();
-					} catch (UnsupportedEncodingException e) {
+					} catch(MessagingException messagingException){
+	                	// could not send mail : rollback
+	                	context.setRollbackOnly();
+	                	return Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null)).build();
+	                } catch (UnsupportedEncodingException e) {
+	                	context.setRollbackOnly();
 						return Response.ok(Helper.createResponse("ERROR", "ENCODING ERROR", null)).build();
 					}
 				}
@@ -580,6 +630,58 @@ public class UserResourceRESTService {
         				userService.update(user);
         				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
         			}
+    			}
+    		}
+    	}
+        return builder.build();
+    }
+    
+    @POST
+    @Path("/askForInvitation")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response askForInvitation(@FormParam("email") String email, @FormParam("userId") String token, @FormParam("message") String message) {
+    	Response.ResponseBuilder builder = null;
+    	if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User requestUser = loginTokenService.getUserIfLoggedIn(token);
+    		if (requestUser == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if(email == null || email.length() == 0){
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
+    			} else{
+    				User askedUser = userService.findByEmail(email);
+    				if (askedUser == null || askedUser.getAktivierToken() == null) {
+    					builder = Response.ok(Helper.createResponse("ERROR", "USER MAIL NOT FOUND", null));
+    				} else{
+						try {
+							if(message == null || message.length() == 0){
+								message = "Keine Nachricht angegeben";
+							}
+							List<String> emailList = new ArrayList<String>();
+							emailList.add(askedUser.getEmail());
+							sendMailService.sendEmail(emailList, requestUser.getVorname()+" "+requestUser.getName()+" möchte in ein Team eingeladen werden", "Hallo "+askedUser.getVorname()+",<br /><br />"
+		                			+ requestUser.getVorname() + " " + requestUser.getName() + " möchte mit der Email <b>"+email+"</b> in eines deiner Teams eingeladen werden.<br /><br />"
+		                			+ "Als Nachricht wurde angegeben:<br />"
+		                			+ message + "<br /><br />"
+		                			+ "So kannst du "+requestUser.getVorname() + " " + requestUser.getName() + " in eines deiner Teams einladen: "
+		                			+ "<ol>"
+		                			+ 	"<li>Logge dich bei <a href=\""+Constants.LOGIN_URL+"\">Teamplaner</a> ein</li>"
+		                			+   "<li>Gehe auf \"mein Team\"</li>"
+		                			+   "<li>Klicke auf \"Teammitglied einladen\"</li>"
+		                			+   "<li>Trage Name, Email und Rolle ein</li>"
+		                			+   "<li>Klicke auf \"Einladen\"</li>"
+		                			+ "</ol><br />"
+		                			+ "Dein Teamplaner Team<br /><br />"
+		                		    + MailTexts.SUPPORT_TEXT, null);
+							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+						} catch(MessagingException messagingException){
+		                	// could not send mail : rollback
+		                	context.setRollbackOnly();
+		                	return Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null)).build();
+		                }
+    				}
     			}
     		}
     	}

@@ -9,8 +9,11 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.logging.Logger;
 
+import javax.annotation.Resource;
+import javax.ejb.EJBContext;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
+import javax.mail.MessagingException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -89,6 +92,9 @@ public class TerminResourceRESTService {
 	@Inject
 	LoginTokenService loginTokenService;
 
+	@Resource
+    private EJBContext context;
+	
 	// Soodle detail
 	@GET
 	@Path("/byId")
@@ -502,20 +508,33 @@ public class TerminResourceRESTService {
     					if (!inTeamAndTrainer) {
     						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM OR NOT TRAINER", null));
     					} else {
-    						termin.setStatus(Integer.parseInt(status));
-    						try {
+    						try{
+    							termin.setStatus(Integer.parseInt(status));
     							terminService.save(termin);
-    							builder = Response
-    									.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(termin, user.getId(), null, null)));
-    							if (status.equals(Constants.TERMIN_STATUS_ABGESAGT)) {
-    								sendMailService.sendEmailToTeam(termin.getTeam(), "Termin abgesagt", "Grund: " + kommentar);
-    							} else if (status.equals(Constants.TERMIN_STATUS_FINDET_STATT)) {
-    								sendMailService.sendEmailToTeam(termin.getTeam(), "Termin findet statt",
-    										"Grund: " + kommentar);
-    							}
-    						} catch (Exception e) {
-    							builder = Response.ok(Helper.createResponse("ERROR", "COULD NOT UPDATE TERMIN", null));
+	    						if(status.equals(Constants.TERMIN_STATUS_ABGESAGT)){
+	    							// nur email schicken bei Kommentar
+	    							if(kommentar != null && kommentar.length() > 0){
+	    								sendMailService.sendEmailToTeam(termin.getTeam(), "Termin "+termin.getName()+" wurde abgesagt", 
+	    										"Hallo,<br /><br />der Termin <b>"+termin.getName()+"</b> wurde abgesagt. Der Grund: <p>" + kommentar + "</p>");
+	    							}
+	    							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+	    						} else if(status.equals(Constants.TERMIN_STATUS_GELOESCHT)){
+	    							terminService.delete(termin);
+	    							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+	    						} else if (status.equals(Constants.TERMIN_STATUS_FINDET_STATT)) {
+	    							// nur email schicken bei Kommentar
+	    							if(kommentar != null && kommentar.length() > 0){
+	    								sendMailService.sendEmailToTeam(termin.getTeam(), "Termin "+termin.getName()+" findet statt",
+	    										"Hallo,<br /><br />der Termin <b>"+termin.getName()+"</b> findet wieder statt. Der Grund: <p>" + kommentar+"</p>");
+	    							}
+    								builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(termin, user.getId(), null, null)));
+	    						}
     						}
+    						catch(MessagingException messagingException){
+								// could not send mail : rollback
+								context.setRollbackOnly();
+								return Response.ok(Helper.createResponse("ERROR", "COULD NOT UPDATE TERMIN", null)).build();
+							}
     					}
     				}
     			}

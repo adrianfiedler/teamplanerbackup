@@ -2,7 +2,7 @@ package org.jboss.as.quickstarts.kitchensink.util;
 
 public class Constants {
 	public static final String PROTOCOL = "https://";
-	public static final String MAIN_URL = PROTOCOL + "masalis.de/teamPlanner";
+	public static final String MAIN_URL = PROTOCOL + "masalis.de/teamplaner";
 	public static final String LOGIN_URL = MAIN_URL + "/login.php";
 	public static final String SERVICE_URL = PROTOCOL + "teamplaner-datacollection.rhcloud.com/rest";
 	public static final String ACTIVATION_URL = MAIN_URL + "/php/activate.php";

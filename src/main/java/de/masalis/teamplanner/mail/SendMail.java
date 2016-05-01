@@ -40,11 +40,11 @@ public class SendMail {
 
 	public void sendEmail(List<String> toList, String subject, String content, String from) throws MessagingException{
 		if(from == null){
-			from = "noreply-teamplanner";
+			from = "noreply-teamplaner";
 		}
 		MimeMessage message = new MimeMessage(gmailSession);
 		message.setFrom(new InternetAddress(from+"@masalis.de"));
-		//message.addRecipients(Message.RecipientType.TO, InternetAddress.parse("teamplanner@masalis.de"));
+		//message.addRecipients(Message.RecipientType.TO, InternetAddress.parse("teamplaner@masalis.de"));
 		StringBuilder replyListBuilder = new StringBuilder();
 		for(String to : toList){
 			message.addRecipients(Message.RecipientType.TO, InternetAddress.parse(to));

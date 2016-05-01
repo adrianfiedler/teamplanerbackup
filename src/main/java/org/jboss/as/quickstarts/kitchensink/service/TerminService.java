@@ -162,6 +162,26 @@ public class TerminService {
 		return em.createQuery(criteria).getResultList();
 	}
 	
+	public List<Termin> findByUserIdAndStartDate(String userId, Date startDate) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Termin> criteria = cb.createQuery(Termin.class);
+		Root<Termin> termin = criteria.from(Termin.class);
+		Join<Termin, Zusage> zusagen = termin.join(Termin_.zusagen);
+		Join<Zusage, User> user = zusagen.join(Zusage_.user);
+		criteria.select(termin)
+				.where(cb.and(
+						cb.equal(user.get(User_.id), userId), 
+						cb.greaterThanOrEqualTo(termin.get(Termin_.datum), startDate),
+						cb.notEqual(termin.get(Termin_.status), "2")
+				));
+		List<Termin> ergs = em.createQuery(criteria).getResultList();
+		if(ergs == null || ergs.size() == 0){
+			return null;
+		} else{
+			return ergs;
+		}
+	}
+	
 	public List<Termin> findAllByDates(Date startDate, Date endDate) {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<Termin> criteria = cb.createQuery(Termin.class);
