@@ -19,6 +19,7 @@ package org.jboss.as.quickstarts.kitchensink.model;
 import java.io.Serializable;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
@@ -33,7 +34,7 @@ public class Serie extends AbstractBaseEntity implements Serializable {
 
     private int intervall;
     
-    @OneToMany(fetch=FetchType.LAZY, mappedBy="serie")
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="serie", cascade={CascadeType.REMOVE})
     private List<Termin> termine;
     
 	public int getIntervall() {

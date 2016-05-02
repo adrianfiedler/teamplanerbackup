@@ -477,6 +477,7 @@ public class UserResourceRESTService {
     								||(terminDay == Calendar.SUNDAY && userSettings.sonntagsAbsagen)){
     							Zusage zusage = Helper.getZusageFromUserInTermin(termin, user);
     							zusage.setStatus(Constants.ABGESAGT);
+    							zusage.setAutoSet(true);
     						}
     					}
     				}

@@ -235,23 +235,19 @@ public class TerminResourceRESTService {
 				}
 			} else {
 				termin = new Termin();
-				termin = terminService.save(termin);
 			}
 			termin.setOrt(ort);
 			ort.getTermine().add(termin);
-			ort = ortService.save(ort);
 			termin.setStatus(1);
 			termin.setBeschreibung(terminRest.beschreibung);
 			termin.setMaybeAllowed(terminRest.maybeAllowed);
 			termin.setName(terminRest.name);
 			termin.setDatum(currentDate);
 			termin.setDefaultZusageStatus(terminRest.defaultZusageStatus);
-			termin = terminService.save(termin);
 
 			Team team = teamService.findById(terminRest.teamId);
 			termin.setTeam(team);
 			team.getTermine().add(termin);
-			teamService.save(team);
 
 			if(terminRest.terminId == null){ // Zusagen und Serie nur bei neuem Termin erstellen
 				List<Zusage> zusagen = new ArrayList<Zusage>();
@@ -272,7 +268,6 @@ public class TerminResourceRESTService {
 				if (serie != null) {
 					termin.setSerie(serie);
 					serie.getTermine().add(termin);
-					serie = terminService.saveSerie(serie);
 				}
 			}
 			
