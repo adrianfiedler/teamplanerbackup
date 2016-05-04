@@ -300,11 +300,11 @@ public class UserResourceRESTService {
         return builder.build();
     }
     
-    @GET
+    @POST
     @Path("/inviteMember")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response inviteMember(@QueryParam("trainerId") String token, @QueryParam("email") String email,
-    		@QueryParam("vorname") String vorname, @QueryParam("name") String name, @QueryParam("teamId") String teamId, @QueryParam("rolle") String rolle){
+    public Response inviteMember(@FormParam("trainerId") String token, @FormParam("email") String email,
+    		@FormParam("vorname") String vorname, @FormParam("name") String name, @FormParam("teamId") String teamId, @FormParam("rolle") String rolle){
         Response.ResponseBuilder builder = null;
         if(token == null || token.length() == 0){
     		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
