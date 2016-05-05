@@ -53,7 +53,7 @@ public class Termin extends AbstractBaseEntity implements Serializable {
     @JoinColumn(name = "ort_ref")
     private Ort ort;
     
-    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.PERSIST,CascadeType.MERGE})
+    @ManyToOne(fetch=FetchType.EAGER, cascade={CascadeType.PERSIST})
     @JoinColumn(name = "serie_ref")
     private Serie serie;
 
