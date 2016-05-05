@@ -18,6 +18,7 @@ package org.jboss.as.quickstarts.kitchensink.model;
 
 import java.io.Serializable;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -41,6 +42,7 @@ public class Zusage extends AbstractBaseEntity implements Serializable {
     
     private int status;
     
+    @Column(columnDefinition="TEXT")
     private String kommentar;
     
     private boolean autoSet;
