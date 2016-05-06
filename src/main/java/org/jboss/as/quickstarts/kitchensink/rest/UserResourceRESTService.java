@@ -667,7 +667,7 @@ public class UserResourceRESTService {
 							List<String> emailList = new ArrayList<String>();
 							emailList.add(askedUser.getEmail());
 							sendMailService.sendEmail(emailList, requestUser.getVorname()+" "+requestUser.getName()+" möchte in ein Team eingeladen werden", "Hallo "+askedUser.getVorname()+",<br /><br />"
-		                			+ requestUser.getVorname() + " " + requestUser.getName() + " möchte mit der Email <b>"+email+"</b> in eines deiner Teams eingeladen werden.<br /><br />"
+		                			+ requestUser.getVorname() + " " + requestUser.getName() + " möchte mit der Email <b>"+requestUser.getEmail()+"</b> in eines deiner Teams eingeladen werden.<br /><br />"
 		                			+ "Als Nachricht wurde angegeben:<br />"
 		                			+ message + "<br /><br />"
 		                			+ "So kannst du "+requestUser.getVorname() + " " + requestUser.getName() + " in eines deiner Teams einladen: "
