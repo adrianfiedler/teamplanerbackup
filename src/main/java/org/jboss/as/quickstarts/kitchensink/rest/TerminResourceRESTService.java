@@ -473,11 +473,11 @@ public class TerminResourceRESTService {
 	}
 
 	// set termin status
-	@GET
+	@POST
 	@Path("/setStatus")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response setTerminStatus(@QueryParam("userId") String token, @QueryParam("terminId") String terminId,
-			@QueryParam("status") String status, @QueryParam("kommentar") String kommentar) {
+	public Response setTerminStatus(@FormParam("userId") String token, @FormParam("terminId") String terminId,
+			@FormParam("status") String status, @FormParam("kommentar") String kommentar) {
 		Response.ResponseBuilder builder = null;
 		if(token == null || token.length() == 0){
     		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));

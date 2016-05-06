@@ -21,6 +21,7 @@ import java.util.Date;
 import java.util.List;
 
 import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -41,6 +42,7 @@ public class Termin extends AbstractBaseEntity implements Serializable {
 
     private int status;
     
+    @Column(columnDefinition="TEXT")
     private String beschreibung;
     
     private String absageKommentar;

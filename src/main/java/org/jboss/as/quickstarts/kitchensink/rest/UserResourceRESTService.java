@@ -132,6 +132,7 @@ public class UserResourceRESTService {
     public Response login(@QueryParam("email") String email, @QueryParam("password") String password, @QueryParam("invitationId") String invitationId){
     	Response.ResponseBuilder builder = null;
     	if(email != null && email.length() > 0){
+    		email = cleanMail(email);
     		User user = userService.findByEmail(email);
         	if(user == null || !user.getPasswort().equals(password)){
         		// kein user oder falsches Passwort
@@ -224,6 +225,7 @@ public class UserResourceRESTService {
     public Response createUser(@FormParam("email") String email, @FormParam("vorname") String vorname, @FormParam("name") String name, 
     		@FormParam("password") String password, @FormParam("invitationId") String invitationId) throws MessagingException, UnsupportedEncodingException {
         Response.ResponseBuilder builder = null;
+        	email = cleanMail(email);
         	User existingUser = userService.findByEmail(email);
         	if(existingUser == null){
         		User user = new User();
@@ -316,6 +318,7 @@ public class UserResourceRESTService {
     				if(Helper.checkIfUserInTeamAndTrainer(trainerUser, team) || 
     						(trainerUser.isAdmin() && team.getVerein().getId().equals(trainerUser.getVerein().getId()))){
     					if(email != null){
+    						email = cleanMail(email);
     						User existingEmailUser = userService.findByEmail(email);
     						if(existingEmailUser == null || !Helper.checkIfUserInTeam(existingEmailUser, team)){
     							if(vorname != null && name != null){
@@ -652,6 +655,7 @@ public class UserResourceRESTService {
     			if(email == null || email.length() == 0){
     				builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
     			} else{
+    				email = cleanMail(email);
     				User askedUser = userService.findByEmail(email);
     				if (askedUser == null || askedUser.getAktivierToken() == null) {
     					builder = Response.ok(Helper.createResponse("ERROR", "USER MAIL NOT FOUND", null));
@@ -687,5 +691,9 @@ public class UserResourceRESTService {
     		}
     	}
         return builder.build();
+    }
+    
+    private String cleanMail(String email){
+    	return email.toLowerCase().replaceAll(" ", "");
     }
 }
