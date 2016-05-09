@@ -126,10 +126,10 @@ public class UserResourceRESTService {
         return builder.build();
     }
 
-    @GET
+    @POST
     @Path("/login")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response login(@QueryParam("email") String email, @QueryParam("password") String password, @QueryParam("invitationId") String invitationId){
+    public Response login(@FormParam("email") String email, @FormParam("password") String password, @FormParam("invitationId") String invitationId){
     	Response.ResponseBuilder builder = null;
     	if(email != null && email.length() > 0){
     		email = cleanMail(email);
