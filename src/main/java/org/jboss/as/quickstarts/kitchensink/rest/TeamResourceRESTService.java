@@ -168,7 +168,7 @@ public class TeamResourceRESTService {
     	    				builder = Response.ok(Helper.createResponse("ERROR", "RECIPIENTS = 0", null));
     	    			} else{
     	    				try {
-    	    					sendMail.sendEmail(toList, subject, message, "noreply-"+team.getName());
+    	    					sendMail.sendEmail(toList, subject, message, "noreply-teammail");
     	    					builder = Response.ok(Helper.createResponse("SUCCESS", "SENT TO "+toList.size()+" recipients", null));
     	    				} catch (MessagingException e) {
     	    					builder = Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null));
