@@ -66,7 +66,7 @@ public class SendMail {
 			String email = user.getEmail();
 			toList.add(email);
 		}
-		sendEmail(toList, subject, content, "noreply-"+team.getName());
+		sendEmail(toList, subject, content, "noreply-team");
 	}
 	
 	public void sendEmailToTeamTrainer(Team team, String subject, String content) throws MessagingException{
@@ -78,7 +78,7 @@ public class SendMail {
 				toList.add(email);
 			}
 		}
-		sendEmail(toList, subject, content, "noreply-"+team.getName());
+		sendEmail(toList, subject, content, "noreply-team");
 	}
 
 	public void sendReminderEmailToTeamTrainer(Team team, String subject, String content) throws MessagingException{
@@ -90,6 +90,6 @@ public class SendMail {
 				toList.add(email);
 			}
 		}
-		sendEmail(toList, subject, content, "noreply-"+team.getName());
+		sendEmail(toList, subject, content, "noreply-team");
 	}
 }
