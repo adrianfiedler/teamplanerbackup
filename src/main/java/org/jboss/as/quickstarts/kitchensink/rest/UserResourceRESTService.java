@@ -201,7 +201,7 @@ public class UserResourceRESTService {
         			for(Termin t : team.getTermine()){
         				Zusage zusage = new Zusage();
         				zusage.setKommentar("");
-        				zusage.setStatus(0);
+        				zusage.setStatus(t.getDefaultZusageStatus());
         				zusage.setTermin(t);
         				zusage.setUser(user);
         				zusageService.save(zusage);
