@@ -459,7 +459,10 @@ public class UserResourceRESTService {
     			if(user == null){
     				builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
     			} else{
-    				UserSettings newUserSettings = new UserSettings();
+    				UserSettings newUserSettings = user.getUserSettings();
+    				if(newUserSettings == null){
+    					newUserSettings = new UserSettings();
+    				}
     				newUserSettings.setMontagsAbsagen(userSettings.montagsAbsagen);
     				newUserSettings.setDienstagsAbsagen(userSettings.dienstagsAbsagen);
     				newUserSettings.setMittwochsAbsagen(userSettings.mittwochsAbsagen);
