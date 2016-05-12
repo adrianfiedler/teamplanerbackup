@@ -247,11 +247,12 @@ public class UserResourceRESTService {
                 List<String> emailList = new ArrayList<String>();
                 emailList.add(email);
                 try{
+                	String activationUrl = Constants.ACTIVATION_URL+"?activationToken="+encodedToken;
                 	sendMailService.sendEmail(emailList, "Willkommen beim TeamPlaner", "Hallo "+vorname+",<br /><br />"
                 			+ "herzlich willkommen beim Teamplaner!<br />"
                 			+ "Vielen Dank für die Registrierung.<br />"
                 			+ "Bitte aktiviere deine Email mit Klick auf folgenden Link: "
-                		+ "<p><a href='"+Constants.ACTIVATION_URL+"?activationToken="+encodedToken+"'>Aktivierung</a></p>"
+                		+ "<p><a href='" + activationUrl + "'>" + activationUrl + "</a></p>"
                 				+ "Dein Teamplaner-Team<br />"
                 				+ MailTexts.SUPPORT_TEXT, null);
                 } catch(MessagingException messagingException){
@@ -539,11 +540,12 @@ public class UserResourceRESTService {
 						String encodedToken = URLEncoder.encode(aktivierToken, "UTF-8");
 						List<String> emailList = new ArrayList<String>();
 						emailList.add(user.getEmail());
+						String activationUrl = Constants.ACTIVATION_URL+"?activationToken="+encodedToken;
 						sendMailService.sendEmail(emailList, "Willkommen beim TeamPlaner", "Hallo "+user.getVorname()+",<br /><br />"
 	                			+ "herzlich willkommen beim Teamplaner!<br />"
 	                			+ "Vielen Dank für die Registrierung.<br />"
 	                			+ "Bitte aktiviere deine Email mit Klick auf folgenden Link: "
-	                		+ "<p><a href='"+Constants.ACTIVATION_URL+"?activationToken="+encodedToken+"'>Aktivierung</a></p>"
+	                		+ "<p><a href='"+ activationUrl +"'>"+ activationUrl +"</a></p>"
 	                				+ "Dein Teamplaner-Team<br />"
 	                				+ MailTexts.SUPPORT_TEXT, null);
 						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
