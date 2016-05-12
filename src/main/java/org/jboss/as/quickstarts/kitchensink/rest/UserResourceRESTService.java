@@ -206,12 +206,12 @@ public class UserResourceRESTService {
         				zusage.setUser(user);
         				zusageService.save(zusage);
         			}
+        			einladung.getInviter().getEinladungen().remove(einladung);
         			einladung.setInviter(null);
         			einladung.setTeam(null);
         			team.getEinladungen().remove(einladung);
         			einladungService.delete(einladung);
         			user.getRollen().add(rolle);
-        			user.getEinladungen().remove(einladung);
         			user = userService.update(user);
         			return true;
         		}
