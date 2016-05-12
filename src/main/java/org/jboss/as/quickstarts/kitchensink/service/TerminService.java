@@ -16,6 +16,7 @@
  */
 package org.jboss.as.quickstarts.kitchensink.service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
@@ -134,6 +135,9 @@ public class TerminService {
 	}
 
 	public List<Termin> findByTeamIdsAndDates(List<String> teamIds, Date startDate, Date endDate) {
+		if(teamIds.size() == 0){
+			return new ArrayList<Termin>();
+		}
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<Termin> criteria = cb.createQuery(Termin.class);
 		Root<Termin> termin = criteria.from(Termin.class);
@@ -144,7 +148,12 @@ public class TerminService {
 						cb.between(termin.get(Termin_.datum), startDate, endDate),
 						cb.notEqual(termin.get(Termin_.status), "2")
 				)).orderBy(cb.asc(termin.get(Termin_.datum)));
-		return em.createQuery(criteria).getResultList();
+		List<Termin> erg = em.createQuery(criteria).getResultList();
+		if(erg != null && erg.size() > 0){
+			return erg;
+		} else{
+			return new ArrayList<Termin>();
+		}
 	}
 	
 	public List<Termin> findByUserIdAndDates(String userId, Date startDate, Date endDate) {

@@ -287,9 +287,10 @@ public class UserResourceRESTService {
     		if(existingUser.getEmail() != null){
     			List<String> emailList = new ArrayList<String>();
                 emailList.add(existingUser.getEmail());
+                String loginUrl = Constants.LOGIN_URL;
     			sendMailService.sendEmail(emailList, "Deine Aktivierung bei TeamPlaner", "Hallo "+existingUser.getVorname()+",<br /><br />"
     					+ "dein Accout bei TeamPlaner wurde erfolgreich aktiviert. Vielen Dank! Du kannst dich jetzt hier einloggen: "
-    					+ "<p><a href='"+Constants.LOGIN_URL+"'>TeamPlaner Login</a></p>"
+    					+ "<p><a href='"+loginUrl+"'>"+loginUrl+"</a></p>"
     							+ "Dein Teamplaner-Team<br />"
     							+ MailTexts.SUPPORT_TEXT, null);
     			builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
@@ -343,11 +344,12 @@ public class UserResourceRESTService {
     										List<String> emailList = new ArrayList<String>();
     										String encryptedInvitationId = CipherUtil.encrypt(einladung.getId());
     										emailList.add(email);
+    										String loginUrl = Constants.LOGIN_URL+"?id="+URLEncoder.encode(encryptedInvitationId, "UTF-8");
     										sendMailService.sendEmail(emailList, "Du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zu TeamPlaner eingeladen",
     												"Hallo " + vorname + " " + name + ",<br /><br />" +
     														"du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zum Team <b>"+team.getName()+"</b> in TeamPlaner eingeladen."
     														+ "<br />Um diesem Team beizutreten, logge dich unter folgendem Link ein oder registriere dich hier: "
-    														+ "<p><a href='"+Constants.LOGIN_URL+"?id="+URLEncoder.encode(encryptedInvitationId, "UTF-8")+"'>TeamPlaner Login</a></p>"
+    														+ "<p><a href='"+loginUrl+"'>"+loginUrl+"</a></p>"
     																+ "TeamPlaner ist ein plattformunabhängiges Tool zum Verwalten von Teams und Terminen. Und das Beste: Es ist kostenlos für dich!<br />"
     																+ "Also nimm die Einladung an und sei mit dabei!<br />"
     																+ MailTexts.SUPPORT_TEXT, null);
@@ -424,7 +426,8 @@ public class UserResourceRESTService {
 					List<String> emailList = new ArrayList<String>();
 					emailList.add(existingUser.getEmail());
 					try {
-						sendMailService.sendEmail(emailList, "Dein neues Teamplaner Passwort", "Hallo "+existingUser.getVorname()+",<br /><br />Dein neues Passwort lautet: "+newPw+"<br /><br />Du kannst dich damit unter <a href=\""+Constants.LOGIN_URL+"\">Teamplaner login</a> einloggen.", null);
+						String loginUrl = Constants.LOGIN_URL;
+						sendMailService.sendEmail(emailList, "Dein neues Teamplaner Passwort", "Hallo "+existingUser.getVorname()+",<br /><br />Dein neues Passwort lautet: "+newPw+"<br /><br />Du kannst dich damit unter <a href=\""+loginUrl+"\">"+loginUrl+"</a> einloggen.", null);
 						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 					} catch(MessagingException messagingException){
 	                	// could not send mail : rollback
@@ -666,13 +669,14 @@ public class UserResourceRESTService {
 							}
 							List<String> emailList = new ArrayList<String>();
 							emailList.add(askedUser.getEmail());
+							String loginUrl = Constants.LOGIN_URL;
 							sendMailService.sendEmail(emailList, requestUser.getVorname()+" "+requestUser.getName()+" möchte in ein Team eingeladen werden", "Hallo "+askedUser.getVorname()+",<br /><br />"
 		                			+ requestUser.getVorname() + " " + requestUser.getName() + " möchte mit der Email <b>"+requestUser.getEmail()+"</b> in eines deiner Teams eingeladen werden.<br /><br />"
 		                			+ "Als Nachricht wurde angegeben:<br />"
 		                			+ message + "<br /><br />"
 		                			+ "So kannst du "+requestUser.getVorname() + " " + requestUser.getName() + " in eines deiner Teams einladen: "
 		                			+ "<ol>"
-		                			+ 	"<li>Logge dich bei <a href=\""+Constants.LOGIN_URL+"\">Teamplaner</a> ein</li>"
+		                			+ 	"<li>Logge dich bei <a href=\""+loginUrl+"\">"+loginUrl+"</a> ein</li>"
 		                			+   "<li>Gehe auf \"mein Team\"</li>"
 		                			+   "<li>Klicke auf \"Teammitglied einladen\"</li>"
 		                			+   "<li>Trage Name, Email und Rolle ein</li>"
