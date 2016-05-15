@@ -142,16 +142,13 @@ public class UserResourceRESTService {
         			builder = Response.ok(Helper.createResponse("ERROR", "USER NOT ACTIVATED", null));
         		} else{
         			// login erfolgreich
-        			boolean invited = true;
         			if(invitationId != null && invitationId.length() > 0){
-        				invited = handleInvitation(user, email, invitationId);
+        				builder = handleInvitation(user, email, invitationId);
         			}
-        			if(invited){
+        			// invitation ok wenn builder == null
+        			if(builder == null){
     					LoginToken loginToken = login(user);
     					builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createLoginRest(user, loginToken)));
-        			}
-        			else{
-        				builder = Response.ok(Helper.createResponse("ERROR", "INVITATION FAILED", null));
         			}
         		}
         	}
@@ -181,43 +178,53 @@ public class UserResourceRESTService {
     	}
     }
     
-    private boolean handleInvitation(User user, String email, String encryptedInvitationId){
+    //liefert Response nur im Fehlerfall, sonst null
+    private Response.ResponseBuilder handleInvitation(User user, String email, String encryptedInvitationId){
     	String invitationId = CipherUtil.decrypt(encryptedInvitationId);
     	if(invitationId != null){
     		Einladung einladung = einladungService.findById(invitationId);
         	if(einladung != null && einladung.getStatus() == 0){
         		Team team = einladung.getTeam();
         		if(team != null){
-        			if(Helper.checkIfUserInTeam(user, team)){
-        				return true;
+        			if(team.getVerein() == user.getVerein()){
+        				if(Helper.checkIfUserInTeam(user, team)){
+        					return null;
+        				}
+        				user.setVerein(team.getVerein());
+        				TeamRolle rolle = new TeamRolle();
+        				rolle.setInTeam(true);
+        				rolle.setRolle(einladung.getRolle());
+        				rolle.setTeam(team);
+        				rolle.setUser(user);
+        				
+        				for(Termin t : team.getTermine()){
+        					Zusage zusage = new Zusage();
+        					zusage.setKommentar("");
+        					zusage.setStatus(t.getDefaultZusageStatus());
+        					zusage.setTermin(t);
+        					zusage.setUser(user);
+        					zusageService.save(zusage);
+        				}
+        				einladung.getInviter().getEinladungen().remove(einladung);
+        				einladung.setInviter(null);
+        				einladung.setTeam(null);
+        				team.getEinladungen().remove(einladung);
+        				einladungService.delete(einladung);
+        				user.getRollen().add(rolle);
+        				user = userService.update(user);
+        				return null;
+        			} else{
+        				return Response.ok(Helper.createResponse("ERROR", "INVITED USER ALREADY IN DIFFERENT VEREIN", null));
         			}
-        			user.setVerein(team.getVerein());
-        			TeamRolle rolle = new TeamRolle();
-        			rolle.setInTeam(true);
-        			rolle.setRolle(einladung.getRolle());
-        			rolle.setTeam(team);
-        			rolle.setUser(user);
-        			
-        			for(Termin t : team.getTermine()){
-        				Zusage zusage = new Zusage();
-        				zusage.setKommentar("");
-        				zusage.setStatus(t.getDefaultZusageStatus());
-        				zusage.setTermin(t);
-        				zusage.setUser(user);
-        				zusageService.save(zusage);
-        			}
-        			einladung.getInviter().getEinladungen().remove(einladung);
-        			einladung.setInviter(null);
-        			einladung.setTeam(null);
-        			team.getEinladungen().remove(einladung);
-        			einladungService.delete(einladung);
-        			user.getRollen().add(rolle);
-        			user = userService.update(user);
-        			return true;
+        		} else{
+        			return Response.ok(Helper.createResponse("ERROR", "TEAM FOR INVITATION NOT FOUND", null));
         		}
+        	} else{
+        		return Response.ok(Helper.createResponse("ERROR", "INVITATION NOT FOUND", null));
         	}
+    	} else{
+    		return Response.ok(Helper.createResponse("ERROR", "INVITATION ID NOT CORRECT", null));
     	}
-    	return false;
     }
     
     @POST
@@ -260,15 +267,13 @@ public class UserResourceRESTService {
                 	context.setRollbackOnly();
                 	return Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null)).build();
                 }
-                boolean invited = true;
                 if(invitationId != null && invitationId.length() > 0){
-        			invited = handleInvitation(user, email, invitationId);
+        			builder = handleInvitation(user, email, invitationId);
         		}
-                if(invited){
+                // invitation ok wenn builder == null
+                if(builder == null){
                 	builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-                } else{
-            		builder = Response.ok(Helper.createResponse("ERROR", "INVITATION ERROR", null));
-            	}
+                } 
         	} else{
         		builder = Response.ok(Helper.createResponse("ERROR", "EMAIL EXISTS", null));
         	}
@@ -347,8 +352,9 @@ public class UserResourceRESTService {
     										emailList.add(email);
     										String loginUrl = Constants.LOGIN_URL+"?id="+URLEncoder.encode(encryptedInvitationId, "UTF-8");
     										sendMailService.sendEmail(emailList, "Du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zu TeamPlaner eingeladen",
-    												"Hallo " + vorname + " " + name + ",<br /><br />" +
-    														"du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zum Team <b>"+team.getName()+"</b> in TeamPlaner eingeladen."
+    												"Hallo " + vorname + " " + name + ",<br /><br />"
+    														+ "du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zum Team <b>"+team.getName()+"</b> "
+    														+ "in den Verein <b>"+team.getVerein()+"</b> in TeamPlaner eingeladen."
     														+ "<br />Um diesem Team beizutreten, logge dich unter folgendem Link ein oder registriere dich hier: "
     														+ "<p><a href='"+loginUrl+"'>"+loginUrl+"</a></p>"
     																+ "TeamPlaner ist ein plattformunabhängiges Tool zum Verwalten von Teams und Terminen. Und das Beste: Es ist kostenlos für dich!<br />"
