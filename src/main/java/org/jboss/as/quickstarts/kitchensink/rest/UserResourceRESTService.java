@@ -186,7 +186,7 @@ public class UserResourceRESTService {
         	if(einladung != null && einladung.getStatus() == 0){
         		Team team = einladung.getTeam();
         		if(team != null){
-        			if(team.getVerein() == user.getVerein()){
+        			if(user.getVerein() == null || team.getVerein() == user.getVerein()){
         				if(Helper.checkIfUserInTeam(user, team)){
         					return null;
         				}
@@ -354,7 +354,7 @@ public class UserResourceRESTService {
     										sendMailService.sendEmail(emailList, "Du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zu TeamPlaner eingeladen",
     												"Hallo " + vorname + " " + name + ",<br /><br />"
     														+ "du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zum Team <b>"+team.getName()+"</b> "
-    														+ "in den Verein <b>"+team.getVerein()+"</b> in TeamPlaner eingeladen."
+    														+ "in den Verein <b>"+team.getVerein().getName()+"</b> in TeamPlaner eingeladen."
     														+ "<br />Um diesem Team beizutreten, logge dich unter folgendem Link ein oder registriere dich hier: "
     														+ "<p><a href='"+loginUrl+"'>"+loginUrl+"</a></p>"
     																+ "TeamPlaner ist ein plattformunabhängiges Tool zum Verwalten von Teams und Terminen. Und das Beste: Es ist kostenlos für dich!<br />"

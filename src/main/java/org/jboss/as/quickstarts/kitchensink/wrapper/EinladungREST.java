@@ -15,4 +15,5 @@ public class EinladungREST implements Serializable {
 	public String vorname;
 	public String email;
 	public int status;
+	public String rolle;
 }

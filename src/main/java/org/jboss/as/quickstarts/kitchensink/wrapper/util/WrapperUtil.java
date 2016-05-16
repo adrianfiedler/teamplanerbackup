@@ -282,6 +282,7 @@ public class WrapperUtil {
 			einladungRest.name = einladung.getName();
 			einladungRest.vorname = einladung.getVorname();
 			einladungRest.status = einladung.getStatus();
+			einladungRest.rolle = einladung.getRolle();
 			rest.add(einladungRest);
 		}
 		return rest;
