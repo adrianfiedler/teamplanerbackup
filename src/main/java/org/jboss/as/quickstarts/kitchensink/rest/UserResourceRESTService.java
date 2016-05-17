@@ -418,38 +418,96 @@ public class UserResourceRESTService {
         return builder.build();
     }
     
+    //bei Passwort vergessen mit Mail eingabe
     @POST
     @Path("/resetPassword")
     @Produces(MediaType.APPLICATION_JSON)
     public Response resetPassword(@FormParam("email") String email) {
         Response.ResponseBuilder builder = null;
-    	User existingUser = userService.findByEmail(email);
-    	if(existingUser != null){
-			if(existingUser.getEmail() != null){
-				if(existingUser.isAktiviert()){
-					String newPw = UUID.randomUUID().toString().substring(0, 12);
-					existingUser.setPasswort(newPw);
-					userService.update(existingUser);
-					List<String> emailList = new ArrayList<String>();
-					emailList.add(existingUser.getEmail());
-					try {
-						String loginUrl = Constants.LOGIN_URL;
-						sendMailService.sendEmail(emailList, "Dein neues Teamplaner Passwort", "Hallo "+existingUser.getVorname()+",<br /><br />Dein neues Passwort lautet: "+newPw+"<br /><br />Du kannst dich damit unter <a href=\""+loginUrl+"\">"+loginUrl+"</a> einloggen.", null);
-						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-					} catch(MessagingException messagingException){
-	                	// could not send mail : rollback
-	                	context.setRollbackOnly();
-	                	return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
-	                }
-				} else{
-	    			builder = Response.ok(Helper.createResponse("ERROR", "USER MAIL NOT ACTIVATED", null));
-	    		}
-    		} else{
-    			builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
-    		}
-    	} else{
-    		builder = Response.ok(Helper.createResponse("ERROR", "NO USER", null));
-    	}
+        if(email != null && email.length() > 0){
+        	User existingUser = userService.findByEmail(email);
+        	if(existingUser != null){
+        		if(existingUser.getEmail() != null){
+        			if(existingUser.isAktiviert()){
+        				try {
+	        				String encUserId = CipherUtil.encrypt(existingUser.getId());
+							encUserId = URLEncoder.encode(encUserId, "UTF-8");
+	        				List<String> emailList = new ArrayList<String>();
+	        				emailList.add(existingUser.getEmail());
+        					String resetPasswordUrl = Constants.RESET_PASSWORD_URL;
+        					sendMailService.sendEmail(emailList, "Dein neues Teamplaner Passwort", 
+        							"Hallo "+existingUser.getVorname()+",<br /><br />"
+        						  + "für deine Email Adresse wurde ein neues Passwort angefordert. Klicke auf folgenden Link, um dir ein neues Passwort zuschicken zu lassen:<br /><br />"
+        						  + "<a href=\""+resetPasswordUrl+"?resetToken="+encUserId+"\">"+resetPasswordUrl+"?resetToken="+encUserId+"</a><br /><br />"
+        						  + "Hast du kein neues Passwort angefordert, dann kannst du diese Mail einfach ignorieren. Dein Passwort wird nicht geändert.<br /><br />"
+        						  + "Dein Teamplaner Team.", null);
+        					builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+        				} catch(MessagingException messagingException){
+        					// could not send mail : rollback
+        					context.setRollbackOnly();
+        					return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
+        				} catch (UnsupportedEncodingException e) {
+        					// could not encode URL : rollback
+        					context.setRollbackOnly();
+        					return Response.ok(Helper.createResponse("ERROR", "ENCODING ERROR", null)).build();
+						}
+        			} else{
+        				builder = Response.ok(Helper.createResponse("ERROR", "USER MAIL NOT ACTIVATED", null));
+        			}
+        		} else{
+        			builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
+        		}
+        	} else{
+        		builder = Response.ok(Helper.createResponse("ERROR", "NO USER", null));
+        	}
+        } else{
+        	builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL SET", null));
+        }
+        return builder.build();
+    }
+    
+    //bei Passwort vergessen aus Email mit Token
+    @POST
+    @Path("/sendNewPassword")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response sendNewPassword(@FormParam("token") String token) {
+        Response.ResponseBuilder builder = null;
+        if(token != null && token.length() > 0){
+        	String userId = CipherUtil.decrypt(token);
+        	if(userId != null){
+        		User existingUser = userService.findById(userId);
+        		if(existingUser != null){
+        			if(existingUser.getEmail() != null){
+        				if(existingUser.isAktiviert()){
+        					String newPw = UUID.randomUUID().toString().substring(0, 12);
+        					existingUser.setPasswort(newPw);
+        					userService.update(existingUser);
+        					List<String> emailList = new ArrayList<String>();
+        					emailList.add(existingUser.getEmail());
+        					try {
+        						String loginUrl = Constants.LOGIN_URL;
+        						sendMailService.sendEmail(emailList, "Dein neues Teamplaner Passwort", "Hallo "+existingUser.getVorname()+",<br /><br />Dein neues Passwort lautet: "+newPw+"<br /><br />Du kannst dich damit unter <a href=\""+loginUrl+"\">"+loginUrl+"</a> einloggen.", null);
+        						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+        					} catch(MessagingException messagingException){
+        						// could not send mail : rollback
+        						context.setRollbackOnly();
+        						return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
+        					}
+        				} else{
+        					builder = Response.ok(Helper.createResponse("ERROR", "USER MAIL NOT ACTIVATED", null));
+        				}
+        			} else{
+        				builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
+        			}
+        		} else{
+        			builder = Response.ok(Helper.createResponse("ERROR", "NO USER", null));
+        		}
+        	} else{
+        		builder = Response.ok(Helper.createResponse("ERROR", "WRONG TOKEN", null));
+        	}
+        } else{
+        	builder = Response.ok(Helper.createResponse("ERROR", "NO TOKEN SET", null));
+        }
         return builder.build();
     }
     

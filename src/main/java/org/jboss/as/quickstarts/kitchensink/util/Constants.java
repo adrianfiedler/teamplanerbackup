@@ -18,6 +18,6 @@ public class Constants {
 	public static final int VIELLEICHT = 2;
 	
 	public static final String TERMIN_URL = MAIN_URL + "/termin.php";
-	
+	public static final String RESET_PASSWORD_URL = MAIN_URL + "/php/resetPw.php";
 	
 }
