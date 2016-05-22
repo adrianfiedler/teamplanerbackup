@@ -50,7 +50,7 @@ public class WeeklyTimer {
 	@Inject
     private Logger log;
 	
-	@Schedule(dayOfWeek = "Sun", hour = "0", minute = "0", second = "0")
+	@Schedule(dayOfWeek = "Mon", hour = "0", minute = "0", second = "0")
 	public void sendWeeklyTeamNotification() {
 		List<User> users = userService.findAllWeeklyNotifiedUsers();
 		if(users != null){
