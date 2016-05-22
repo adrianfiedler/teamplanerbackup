@@ -83,4 +83,14 @@ public class EinladungService {
         	return null;
         }
 	}
+	
+	public List<Einladung> findByEmail(String email) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Einladung> criteria = cb.createQuery(Einladung.class);
+        Root<Einladung> einladung = criteria.from(Einladung.class);
+        criteria.select(einladung).where(cb.and(
+        		cb.equal(einladung.get(Einladung_.email), email)));
+        List<Einladung> results = em.createQuery(criteria).getResultList();
+        return results;
+	}
 }

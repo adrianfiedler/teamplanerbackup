@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -248,6 +249,8 @@ public class UserResourceRESTService {
                 user.setRollen(new ArrayList<TeamRolle>());
                 user.setEinladungen(new ArrayList<Einladung>());
                 user.setZusagen(new ArrayList<Zusage>());
+                user.setWeeklyStatusMail(true);
+                user.setTerminReminderMail(true);
                 userService.register(user);
                 
                 String encodedToken = URLEncoder.encode(aktivierToken, "UTF-8");
@@ -768,5 +771,51 @@ public class UserResourceRESTService {
     
     private String cleanMail(String email){
     	return email.toLowerCase().replaceAll(" ", "");
+    }
+    
+    @POST
+    @Path("/deleteUser")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteUser(@FormParam("email") String email, @FormParam("userId") String token) {
+    	Response.ResponseBuilder builder = null;
+    	if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User requestUser = loginTokenService.getUserIfLoggedIn(token);
+    		if (requestUser == null) {
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if(email == null || email.length() == 0){
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
+    			} else{
+    				email = cleanMail(email);
+    				User userToDelete = userService.findByEmail(email);
+    				if (userToDelete == null || userToDelete.getAktivierToken() == null) {
+    					builder = Response.ok(Helper.createResponse("ERROR", "USER MAIL NOT FOUND", null));
+    				} else{
+						try {
+							for(TeamRolle rolle : userToDelete.getRollen()){
+								rolle.getTeam().getRollen().remove(rolle);
+							}
+							for(Zusage zusage : userToDelete.getZusagen()){
+								zusage.getTermin().getZusagen().remove(zusage);
+							}
+							List<Einladung> einladungen = einladungService.findByEmail(email);
+							if(einladungen != null){
+								for(Einladung einladung : einladungen){
+									einladung.getTeam().getEinladungen().remove(einladung);
+								}
+							}
+							userService.delete(userToDelete);
+							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+						} catch (Exception e) {
+							context.setRollbackOnly();
+							builder = Response.ok(Helper.createResponse("ERROR", "DELETE SERVICE ERROR", null));
+						}
+    				}
+    			}
+    		}
+    	}
+        return builder.build();
     }
 }
