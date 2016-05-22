@@ -107,6 +107,7 @@ public class VereinResourceRESTService {
     					verein.setOrte(new ArrayList<Ort>());
     					verein.setVereinsTeams(new ArrayList<Team>());
     					VereinModule module = new VereinModule();
+    					module.setMailModul(true);
     					module.setVerein(verein);
     					verein.setModule(module);
     					user.setAdmin(true);

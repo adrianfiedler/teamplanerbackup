@@ -62,6 +62,7 @@ public class WeeklyTimer {
 				builder.append("Hallo "+user.getVorname()+"!<br /><br />"
 						+ "Hier ist dein Teamplaner-Überblick über deine Termine der kommenden Woche.<br /><br />");
 				
+				boolean showIntroduction = false;
 				//adde fuer jedes Team alle Termine
 				for(TeamRolle rolle : user.getRollen()){
 					Team team = rolle.getTeam();
@@ -69,11 +70,17 @@ public class WeeklyTimer {
 					teamIds.add(team.getId());
 					List<Termin> teamTermine = terminService.findByTeamIdsAndDates(teamIds, nowCal.getTime(), inOneWeekCal.getTime());
 					appendTeamEntry(builder, team, teamTermine, user);
+					if(team.getWeeklyTeamMailSettings() != null & team.getWeeklyTeamMailSettings().isShowIntroduction()){
+						//zeige Anleitung wenn fuer min 1 Team showIntroduction = true ist
+						showIntroduction = true;
+					}
 				}
 				
 				List<String> toList = new ArrayList<String>();
 				toList.add(user.getEmail());
-				builder.append("<br />"+MailTexts.TUTORIAL_TEXT+"<br />");
+				if(showIntroduction){
+					builder.append("<br />"+MailTexts.TUTORIAL_TEXT+"<br />");
+				}
 				builder.append("<br />"+MailTexts.UNREGISTER_WEEKLY_TEXT+"<br />");
 				builder.append("<br />"+MailTexts.SUPPORT_TEXT+"<br />");
 				try {
