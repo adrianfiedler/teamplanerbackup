@@ -171,4 +171,14 @@ public class Helper {
 		}
 		return rollenCount;
 	}
+	
+	public static List<User> getTrainerOfTeam(Team team){
+		List<User> trainer = new ArrayList<User>();
+		for(TeamRolle rolle : team.getRollen()){
+			if(rolle.getRolle().equals(Constants.TRAINER_ROLE)){
+				trainer.add(rolle.getUser());
+			}
+		}
+		return trainer;
+	}
 }

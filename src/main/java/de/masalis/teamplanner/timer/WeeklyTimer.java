@@ -60,7 +60,7 @@ public class WeeklyTimer {
 			StringBuilder builder = new StringBuilder();
 			for(User user : users){
 				builder.append("Hallo "+user.getVorname()+"!<br /><br />"
-						+ "Hier ist dein Teamplaner-Überblick über deine Termine der kommenden Woche.<br /><br />");
+						+ "Hier ist dein Teamplaner-Überblick über deine Termine des Vereins "+user.getVerein().getName()+" der kommenden Woche.<br /><br />");
 				
 				boolean showIntroduction = false;
 				//adde fuer jedes Team alle Termine
@@ -81,6 +81,7 @@ public class WeeklyTimer {
 				if(showIntroduction){
 					builder.append("<br />"+MailTexts.TUTORIAL_TEXT+"<br />");
 				}
+				builder.append("<br />"+MailTexts.TEAM_QUESTION+"<br />");
 				builder.append("<br />"+MailTexts.UNREGISTER_WEEKLY_TEXT+"<br />");
 				builder.append("<br />"+MailTexts.SUPPORT_TEXT+"<br />");
 				try {
@@ -127,6 +128,7 @@ public class WeeklyTimer {
 	
 	private void appendTeamEntry(StringBuilder builder, Team team, List<Termin> teamTermine, User user){
 		builder.append("<h3>"+team.getName()+"</h3>");
+		appendTeamTrainerList(builder, team);
 		TeamMailSettings settings = team.getWeeklyTeamMailSettings();
 		if(settings != null){
 			if(settings.isShowMailText()){
@@ -135,6 +137,19 @@ public class WeeklyTimer {
 		}
 		for(Termin termin : teamTermine){
 			appendTerminEntry(builder, termin, user);
+		}
+	}
+	
+	private void appendTeamTrainerList(StringBuilder builder, Team team){
+		List<User> trainers = Helper.getTrainerOfTeam(team);
+		if(trainers.size() > 0){
+			builder.append("Trainer:<br />");
+			for(User trainer : trainers){
+				builder.append(trainer.getVorname()+" "+trainer.getName()+" - "
+						+ "<a href=\"mailto:"+trainer.getEmail()+"\">"+trainer.getEmail()+"</a>")
+				.append("<br />");
+			}
+			builder.append("<br />");
 		}
 	}
 }

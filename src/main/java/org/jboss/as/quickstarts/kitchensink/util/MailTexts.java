@@ -1,8 +1,9 @@
 package org.jboss.as.quickstarts.kitchensink.util;
 
 public class MailTexts {
-	public static final String SUPPORT_TEXT = "Hast du Fragen oder Probleme? Dann schreibe eine Mail an <a href=\"mailto:support@masalis.de\">support@masalis.de</a>";
+	public static final String SUPPORT_TEXT = "Hast du technische Probleme oder einen Fehler gefunden? Dann schreibe eine Mail an <a href=\"mailto:support@masalis.de\">support@masalis.de</a>";
 	public static final String UNREGISTER_WEEKLY_TEXT = "Willst du diese Email nicht mehr erhalten, kannst du sie unter Profil verwalten -> Mailverwaltung abstellen. <a href=\""+Constants.LOGIN_URL+"\">"+Constants.LOGIN_URL+"</a>";
+	public static final String TEAM_QUESTION = "Hast du inhaltliche oder organisatorische Fragen? Dann wende dich an die oben aufgeführten Trainer";
 	
 	public static final String UNREGISTER_TRAINER_NOTIF_TEXT = "Du erhältst diese Mail, weil du Termin Benachrichtigungen in deinem Profil aktiviert hast. "
 			+ "Du kannst dies jederzeit deaktivieren, indem du dich unter <a href=\""+Constants.LOGIN_URL+"\">"+Constants.LOGIN_URL+"</a> einloggst "

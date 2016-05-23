@@ -2,10 +2,12 @@ package org.jboss.as.quickstarts.kitchensink.rest;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.logging.Logger;
 
@@ -504,13 +506,17 @@ public class TerminResourceRESTService {
     						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT IN TEAM OR NOT TRAINER", null));
     					} else {
     						try{
+    							SimpleDateFormat formatter=new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMAN);  
+    							formatter.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
+    							String terminDate = formatter.format(termin.getDatum());
+    							
     							termin.setStatus(Integer.parseInt(status));
     							terminService.save(termin);
 	    						if(status.equals(Constants.TERMIN_STATUS_ABGESAGT)){
 	    							// nur email schicken bei Kommentar
 	    							if(kommentar != null && kommentar.length() > 0){
 	    								sendMailService.sendEmailToTeam(termin.getTeam(), "Termin "+termin.getName()+" wurde abgesagt", 
-	    										"Hallo,<br /><br />der Termin <b>"+termin.getName()+"</b> wurde abgesagt. Der Grund: <p>" + kommentar + "</p>");
+	    										"Hallo,<br /><br />der Termin <b>"+termin.getName()+"</b> am "+terminDate+" wurde abgesagt. Der Grund: <p>" + kommentar + "</p>");
 	    							}
 	    							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 	    						} else if(status.equals(Constants.TERMIN_STATUS_GELOESCHT)){
@@ -520,7 +526,7 @@ public class TerminResourceRESTService {
 	    							// nur email schicken bei Kommentar
 	    							if(kommentar != null && kommentar.length() > 0){
 	    								sendMailService.sendEmailToTeam(termin.getTeam(), "Termin "+termin.getName()+" findet statt",
-	    										"Hallo,<br /><br />der Termin <b>"+termin.getName()+"</b> findet wieder statt. Der Grund: <p>" + kommentar+"</p>");
+	    										"Hallo,<br /><br />der Termin <b>"+termin.getName()+"</b> am "+terminDate+" findet wieder statt. Der Grund: <p>" + kommentar+"</p>");
 	    							}
     								builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(termin, user.getId(), null, null)));
 	    						}
