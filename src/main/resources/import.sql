@@ -51,3 +51,8 @@ insert into TeamMailSettings (id, mailText, showMailText, showIntroduction, hour
 insert into VereinModule (id, mailModul, verein_ref) values (-1, true, -1)
 insert into TeamSettings (id, trainerMussZusagen, team_ref) values (-1,  true, -1)
 insert into TeamSettings (id, trainerMussZusagen, team_ref) values (-2, false, -2)
+
+insert into News (id, title, text, ersteller, category, pictureUrl, creationDate, modificationDate) values (-1, "Erste News", "Hier ist der Text der ersten News", "Adrian", "Allgemeines", "https://upload.wikimedia.org/wikipedia/commons/1/13/Nuvola_filesystems_folder_home.png", "2016-05-31 11:00:00", "2016-05-31 11:00:00")
+insert into News (id, title, text, ersteller, category, pictureUrl, creationDate, modificationDate) values (-2, "Zweite News", "Hier ist der Text der zweiten News", "Masalis", "Info", null, "2016-06-01 20:00:00", "2016-06-01 20:00:00")
+insert into News (id, title, text, ersteller, category, pictureUrl, creationDate, modificationDate) values (-3, "Dritte News", "Hier ist der Text der dritten News", "Jule", "Allgemeines", "https://upload.wikimedia.org/wikipedia/commons/2/2b/Nuvola_apps_konquest.png", "2016-06-01 21:00:00", "2016-06-01 21:00:00")
+insert into News (id, title, text, ersteller, category, pictureUrl, creationDate, modificationDate) values (-4, "Vierte News", "Hier ist der Text der vierten News", "Weihnachtsmann", "Wartungsarbeiten", null, "2016-06-02 12:00:00", "2016-06-02 12:00:00")
