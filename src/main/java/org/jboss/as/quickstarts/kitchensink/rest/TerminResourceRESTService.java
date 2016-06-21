@@ -605,20 +605,24 @@ public class TerminResourceRESTService {
 				List<Termin> termine = terminService.findByUserIdAndDates(user.getId(), startDate, endDate);
 				if(termine != null && termine.size() > 0){
 					for(Termin termin : termine){
-						Zusage zusage = Helper.getZusageFromUserInTermin(termin, user);
-						if(zusage == null){
-							builder = Response.ok(Helper.createResponse("ERROR", "NO ZUSAGE FOUND", null));
-							return builder.build();
+						if(status == Constants.VIELLEICHT && !termin.isMaybeAllowed()){
+							// skip
 						} else{
-							if(wochenTag == -1){
-								zusage.setStatus(status);
+							Zusage zusage = Helper.getZusageFromUserInTermin(termin, user);
+							if(zusage == null){
+								builder = Response.ok(Helper.createResponse("ERROR", "NO ZUSAGE FOUND", null));
+								return builder.build();
 							} else{
-								Calendar terminCal = Calendar.getInstance();
-								terminCal.setTime(termin.getDatum());
-								int terminDay = terminCal.get(Calendar.DAY_OF_WEEK);
-								int absageDay = Helper.convertToJavaWeekDay(wochenTag);
-								if(terminDay == absageDay){
+								if(wochenTag == -1){
 									zusage.setStatus(status);
+								} else{
+									Calendar terminCal = Calendar.getInstance();
+									terminCal.setTime(termin.getDatum());
+									int terminDay = terminCal.get(Calendar.DAY_OF_WEEK);
+									int absageDay = Helper.convertToJavaWeekDay(wochenTag);
+									if(terminDay == absageDay){
+										zusage.setStatus(status);
+									}
 								}
 							}
 						}

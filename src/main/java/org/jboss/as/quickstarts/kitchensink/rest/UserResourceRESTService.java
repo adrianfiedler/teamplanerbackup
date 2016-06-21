@@ -818,4 +818,28 @@ public class UserResourceRESTService {
     	}
         return builder.build();
     }
+    
+    @POST
+    @Path("/changeUsernames")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response changeUsernames(@FormParam("userId") String token, @FormParam("newSurname") String newSurname, @FormParam("newName") String newName) {
+        Response.ResponseBuilder builder = null;
+        if(token == null || token.length() == 0){
+    		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+    	} else{
+    		User existingUser = loginTokenService.getUserIfLoggedIn(token);
+    		if(existingUser == null){
+    			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+    		} else{
+    			if(newSurname == null || newSurname.length() == 0 || newName == null || newName.length() == 0){
+    				builder = Response.ok(Helper.createResponse("ERROR", "NO NAMES SET", null));
+    			} else{
+    				existingUser.setName(newName);
+    				existingUser.setVorname(newSurname);
+    				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    			}
+    		}
+    	}
+        return builder.build();
+    }
 }
