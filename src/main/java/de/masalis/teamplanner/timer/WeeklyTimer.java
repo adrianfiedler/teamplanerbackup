@@ -85,7 +85,7 @@ public class WeeklyTimer {
 				builder.append("<br />"+MailTexts.UNREGISTER_WEEKLY_TEXT+"<br />");
 				builder.append("<br />"+MailTexts.SUPPORT_TEXT+"<br />");
 				try {
-					sendMail.sendEmail(toList, "Deine wöchentliche Terminübersicht", builder.toString(), "noreply-termine");
+					sendMail.sendEmail(toList, "Deine wöchentliche Terminübersicht", builder.toString(), Constants.MAIL_SENDER);
 					Thread.sleep(2000);
 					builder.setLength(0);
 					log.log(Level.INFO, "Weekly mail sent");

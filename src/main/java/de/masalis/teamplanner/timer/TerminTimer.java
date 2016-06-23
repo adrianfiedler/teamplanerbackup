@@ -138,7 +138,7 @@ public class TerminTimer {
 					builder.append("<br />").append(MailTexts.UNREGISTER_TRAINER_NOTIF_TEXT);
 					List<String> toList = new ArrayList<String>();
 					toList.add(user.getEmail());
-					sendMail.sendEmail(toList, "Statusmail Termin "+formatter.format(termin.getDatum()), builder.toString(), "noreply-"+team.getName());
+					sendMail.sendEmail(toList, "Statusmail Termin "+formatter.format(termin.getDatum()), builder.toString(), Constants.MAIL_SENDER);
 					// terminReminderService.delete(reminder);
 				}
 			} catch (Exception e) {

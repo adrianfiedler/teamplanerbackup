@@ -264,7 +264,7 @@ public class UserResourceRESTService {
                 			+ "Bitte aktiviere deine Email mit Klick auf folgenden Link: "
                 		+ "<p><a href='" + activationUrl + "'>" + activationUrl + "</a></p>"
                 				+ "Dein Teamplaner-Team<br />"
-                				+ MailTexts.SUPPORT_TEXT, null);
+                				+ MailTexts.SUPPORT_TEXT, Constants.MAIL_SENDER);
                 } catch(MessagingException messagingException){
                 	// could not send mail : rollback
                 	context.setRollbackOnly();
@@ -301,7 +301,7 @@ public class UserResourceRESTService {
     					+ "dein Accout bei TeamPlaner wurde erfolgreich aktiviert. Vielen Dank! Du kannst dich jetzt hier einloggen: "
     					+ "<p><a href='"+loginUrl+"'>"+loginUrl+"</a></p>"
     							+ "Dein Teamplaner-Team<br />"
-    							+ MailTexts.SUPPORT_TEXT, null);
+    							+ MailTexts.SUPPORT_TEXT, Constants.MAIL_SENDER);
     			builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     		} else{
     			builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
@@ -362,7 +362,7 @@ public class UserResourceRESTService {
     														+ "<p><a href='"+loginUrl+"'>"+loginUrl+"</a></p>"
     																+ "TeamPlaner ist ein plattformunabhängiges Tool zum Verwalten von Teams und Terminen. Und das Beste: Es ist kostenlos für dich!<br />"
     																+ "Also nimm die Einladung an und sei mit dabei!<br />"
-    																+ MailTexts.SUPPORT_TEXT, null);
+    																+ MailTexts.SUPPORT_TEXT, Constants.MAIL_SENDER);
     										builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     									} catch(MessagingException messagingException){
     					                	// could not send mail : rollback
@@ -443,7 +443,7 @@ public class UserResourceRESTService {
         						  + "für deine Email Adresse wurde ein neues Passwort angefordert. Klicke auf folgenden Link, um dir ein neues Passwort zuschicken zu lassen:<br /><br />"
         						  + "<a href=\""+resetPasswordUrl+"?resetToken="+encUserId+"\">"+resetPasswordUrl+"?resetToken="+encUserId+"</a><br /><br />"
         						  + "Hast du kein neues Passwort angefordert, dann kannst du diese Mail einfach ignorieren. Dein Passwort wird nicht geändert.<br /><br />"
-        						  + "Dein Teamplaner Team.", null);
+        						  + "Dein Teamplaner Team.", Constants.MAIL_SENDER);
         					builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
         				} catch(MessagingException messagingException){
         					// could not send mail : rollback
@@ -489,7 +489,7 @@ public class UserResourceRESTService {
         					emailList.add(existingUser.getEmail());
         					try {
         						String loginUrl = Constants.LOGIN_URL;
-        						sendMailService.sendEmail(emailList, "Dein neues Teamplaner Passwort", "Hallo "+existingUser.getVorname()+",<br /><br />Dein neues Passwort lautet: "+newPw+"<br /><br />Du kannst dich damit unter <a href=\""+loginUrl+"\">"+loginUrl+"</a> einloggen.", null);
+        						sendMailService.sendEmail(emailList, "Dein neues Teamplaner Passwort", "Hallo "+existingUser.getVorname()+",<br /><br />Dein neues Passwort lautet: "+newPw+"<br /><br />Du kannst dich damit unter <a href=\""+loginUrl+"\">"+loginUrl+"</a> einloggen.", Constants.MAIL_SENDER);
         						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
         					} catch(MessagingException messagingException){
         						// could not send mail : rollback
@@ -617,7 +617,7 @@ public class UserResourceRESTService {
 	                			+ "Bitte aktiviere deine Email mit Klick auf folgenden Link: "
 	                		+ "<p><a href='"+ activationUrl +"'>"+ activationUrl +"</a></p>"
 	                				+ "Dein Teamplaner-Team<br />"
-	                				+ MailTexts.SUPPORT_TEXT, null);
+	                				+ MailTexts.SUPPORT_TEXT, Constants.MAIL_SENDER);
 						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 					} catch(MessagingException messagingException){
 	                	// could not send mail : rollback
@@ -755,7 +755,7 @@ public class UserResourceRESTService {
 		                			+   "<li>Klicke auf \"Einladen\"</li>"
 		                			+ "</ol><br />"
 		                			+ "Dein Teamplaner Team<br /><br />"
-		                		    + MailTexts.SUPPORT_TEXT, null);
+		                		    + MailTexts.SUPPORT_TEXT, Constants.MAIL_SENDER);
 							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 						} catch(MessagingException messagingException){
 		                	// could not send mail : rollback

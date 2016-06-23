@@ -50,6 +50,7 @@ import org.jboss.as.quickstarts.kitchensink.service.RollenService;
 import org.jboss.as.quickstarts.kitchensink.service.TeamService;
 import org.jboss.as.quickstarts.kitchensink.service.UserService;
 import org.jboss.as.quickstarts.kitchensink.service.VereinService;
+import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
 import org.jboss.as.quickstarts.kitchensink.util.ResponseTypes;
 import org.jboss.as.quickstarts.kitchensink.wrapper.TerminREST;
@@ -168,7 +169,7 @@ public class TeamResourceRESTService {
     	    				builder = Response.ok(Helper.createResponse("ERROR", "RECIPIENTS = 0", null));
     	    			} else{
     	    				try {
-    	    					sendMail.sendEmail(toList, subject, message, "noreply-teammail");
+    	    					sendMail.sendEmail(toList, subject, message, Constants.MAIL_SENDER);
     	    					builder = Response.ok(Helper.createResponse("SUCCESS", "SENT TO "+toList.size()+" recipients", null));
     	    				} catch (MessagingException e) {
     	    					builder = Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null));
