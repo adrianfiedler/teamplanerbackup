@@ -56,7 +56,7 @@ public class TerminTimer {
 	@Inject
 	TerminReminderService terminReminderService;
 	
-	@Schedule(hour = "0", minute = "0", second = "0")
+	@Schedule(hour = "15", minute = "50", second = "0")
 	public void createBeforeTerminNotification() {
 		log.log(Level.INFO, "TerminTimer: Termin Reminder schedulings starting...");
 		TimerService timerService = context.getTimerService();
