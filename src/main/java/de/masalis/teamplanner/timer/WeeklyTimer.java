@@ -59,8 +59,8 @@ public class WeeklyTimer {
 			inOneWeekCal.add(Calendar.DAY_OF_YEAR, 7);
 			StringBuilder builder = new StringBuilder();
 			for(User user : users){
-				builder.append("Hallo "+user.getVorname()+"!<br /><br />"
-						+ "Hier ist dein Teamplaner-Überblick über deine Termine des Vereins "+user.getVerein().getName()+" der kommenden Woche.<br /><br />");
+				builder.append("<p>Hallo "+user.getVorname()+"!</p>"
+						+ "<p>Hier ist dein Teamplaner-Überblick über deine Termine des Vereins "+user.getVerein().getName()+" der kommenden Woche.</p>");
 				
 				boolean showIntroduction = false;
 				//adde fuer jedes Team alle Termine
@@ -78,12 +78,13 @@ public class WeeklyTimer {
 				
 				List<String> toList = new ArrayList<String>();
 				toList.add(user.getEmail());
+				builder.append("<p><a href=\""+Constants.LOGIN_URL+"\">Direkt zum TeamPlaner</a></p>");
+				builder.append("<hr>");
 				if(showIntroduction){
-					builder.append("<br />"+MailTexts.TUTORIAL_TEXT+"<br />");
+					builder.append(""+MailTexts.TUTORIAL_TEXT+"");
 				}
-				builder.append("<br />"+MailTexts.TEAM_QUESTION+"<br />");
-				builder.append("<br />"+MailTexts.UNREGISTER_WEEKLY_TEXT+"<br />");
-				builder.append("<br />"+MailTexts.SUPPORT_TEXT+"<br />");
+				builder.append("<p>"+MailTexts.TEAM_QUESTION+"</p>");
+				builder.append("<p>"+MailTexts.UNREGISTER_WEEKLY_TEXT+"</p>");
 				try {
 					sendMail.sendEmail(toList, "Deine wöchentliche Terminübersicht", builder.toString(), Constants.MAIL_SENDER);
 					Thread.sleep(2000);
@@ -95,10 +96,11 @@ public class WeeklyTimer {
 					e.printStackTrace();
 				}
 			}
+			log.log(Level.INFO, "#All Weekly mails sent: "+users.size());
 		}
 	}
 
-	private void appendTerminEntry(StringBuilder builder, Termin termin, User user) {
+	private void appendTerminEntry(StringBuilder builder, Termin termin, User user, int index) {
 		try {
 			String encodedTerminId = URLEncoder.encode(termin.getId(), "UTF-8");
 			Locale locale = Locale.GERMAN;
@@ -109,18 +111,46 @@ public class WeeklyTimer {
 			SimpleDateFormat dayFormatter=new SimpleDateFormat("EE", locale);  
 			String currentDate = formatter.format(termin.getDatum());
 			String currentDay = dayFormatter.format(termin.getDatum());
-			builder.append("<b>"+currentDay+"</b> ");
-			builder.append(currentDate);
-			builder.append(" <b>"+termin.getName()+"</b><br />");
-			String terminBeschreibung = termin.getBeschreibung() != null? termin.getBeschreibung()+"<br />" : "";
-			builder.append(terminBeschreibung);
+			if(index%2==0){
+				builder.append("<tr style='background-color: rgb(216, 216, 216);'>");
+			}
+			else{
+				builder.append("<tr style='background-color: rgb(230, 230, 230);'>");
+			}
+			if(termin.getStatus() == Constants.ABGESAGT){
+				builder.append("<td><div style='border-radius: 50%; -moz-border-radius: 50%; -webkit-border-radius: 50%; width: 20px; height: 20px; margin-left: 5px; background-color:#d9534f; float:left;'></div> Abgesagt");
+				String terminBeschreibung = termin.getBeschreibung() != null? "<br/>"+termin.getBeschreibung() : "";
+				builder.append(terminBeschreibung);
+				builder.append("</td>");
+			}
+			else{
+				builder.append("<td><div style='border-radius: 50%; -moz-border-radius: 50%; -webkit-border-radius: 50%; width: 20px; height: 20px; margin-left: 5px; background-color:#5cb85c; float:left;'></div> Findet statt");
+				String terminBeschreibung = termin.getBeschreibung() != null? "<br/>"+termin.getBeschreibung() : "";
+				builder.append(terminBeschreibung);
+				builder.append("</td>");
+			}
+			builder.append("<td>"+currentDay+"</td> ");
+			builder.append("<td>"+currentDate+"</td> ");
+			builder.append("<td>"+termin.getName()+"</td> ");
 			Zusage userZusage = Helper.getZusageFromUserInTermin(termin, user);
 			String userZusageString = "";
+			String zusageColor="";
 			if(userZusage != null){
 				userZusageString = Helper.getZusageStringFromStatus(userZusage.getStatus());
+				if(userZusage.getStatus() == Constants.ZUGESAGT){
+					zusageColor = "color:#5cb85c;";
+				}
+				else if(userZusage.getStatus() == Constants.ABGESAGT){
+					zusageColor = "color:#d9534f;";
+				}
+				else{
+					zusageColor = "color : #f0ad4e;";
+				}
 			}
-			builder.append("Dein Status: <b>"+userZusageString+"</b> <a href=\""+Constants.TERMIN_URL+"?terminId="+encodedTerminId+"\">Zur Terminübersicht</a>");
-			builder.append("<br />");
+			
+			builder.append("<td style='"+zusageColor+" font-weight:bold;'>"+userZusageString+"</td>");
+			//builder.append("<td><a href='"+Constants.TERMIN_URL+"?terminId="+encodedTerminId+"' style='color: rgb(223, 105, 26);'>Zur Terminübersicht</a></td>");
+			builder.append("</tr>");
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
@@ -135,19 +165,37 @@ public class WeeklyTimer {
 				builder.append("<p>"+settings.getMailText()+"</p>");
 			}
 		}
-		for(Termin termin : teamTermine){
-			appendTerminEntry(builder, termin, user);
+		if(teamTermine == null || teamTermine.size() == 0){
+			builder.append("<p>Zur Zeit gibt es für kommende Woche keine Termine für dieses Team.</p>");
+		} else{
+			builder.append("<div style='font-weight: bold; margin-bottom: 5px;'>Deine Termine:</div>");
+			builder.append("<p><a href=\""+Constants.LOGIN_URL+"\">Direkt zum TeamPlaner</a></p>");
+			builder.append("<table style='width:100%;'>");
+			builder.append("<thead>");
+			builder.append("<tr style='background-color:#1F3950; color: white;'>");
+			builder.append("<th>Termin-Status</th><th>Tag</th><th>Datum &amp; Uhrzeit</th><th>Termin</th><th>Dein Status</th>");
+			builder.append("</tr>");
+			builder.append("</thead>");
+			builder.append("<tbody>");
+			/*for(Termin termin : teamTermine){
+				appendTerminEntry(builder, termin, user);
+			}*/
+			for(int i = 0; i<teamTermine.size(); i++){
+				appendTerminEntry(builder, teamTermine.get(i), user, i);
+			}
+			builder.append("</tbody></table><br>");
 		}
 	}
 	
 	private void appendTeamTrainerList(StringBuilder builder, Team team){
 		List<User> trainers = Helper.getTrainerOfTeam(team);
 		if(trainers.size() > 0){
-			builder.append("Trainer:<br />");
+			builder.append("<div style='font-weight: bold;'>Trainer:</div>");
 			for(User trainer : trainers){
+				builder.append("<div>");
 				builder.append(trainer.getVorname()+" "+trainer.getName()+" - "
 						+ "<a href=\"mailto:"+trainer.getEmail()+"\">"+trainer.getEmail()+"</a>")
-				.append("<br />");
+				.append("</div>");
 			}
 			builder.append("<br />");
 		}

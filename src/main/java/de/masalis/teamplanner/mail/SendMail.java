@@ -21,6 +21,7 @@ import org.jboss.as.quickstarts.kitchensink.model.Team;
 import org.jboss.as.quickstarts.kitchensink.model.TeamRolle;
 import org.jboss.as.quickstarts.kitchensink.model.User;
 import org.jboss.as.quickstarts.kitchensink.util.Constants;
+import org.jboss.as.quickstarts.kitchensink.util.MailTexts;
 
 /**
  * Session Bean implementation class GwMessage
@@ -54,7 +55,7 @@ public class SendMail {
 		message.setReplyTo(InternetAddress.parse(replyListBuilder.toString()));
 		message.setSubject(subject, "UTF-8");
 		//message.setText(content);
-		message.setContent(content.replaceAll("(\r\n|\n)", "<br />"), "text/html; charset=utf-8");
+		message.setContent(generateHTMLMail(content).replaceAll("(\r\n|\n)", "<br />"), "text/html; charset=utf-8");
 
 		Transport.send(message);
 	}
@@ -91,5 +92,44 @@ public class SendMail {
 			}
 		}
 		sendEmail(toList, subject, content, Constants.MAIL_SENDER);
+	}
+	
+	public String generateHTMLMail(String content){
+		StringBuilder builder = new StringBuilder();
+		builder.append("<!Doctype html>");
+		builder.append("<html>");
+		builder.append("<head>");
+		builder.append("<style>");
+		builder.append(".headerDiv{height: 48px; width: 100%;} ");
+		builder.append(".bgBlue{background-color:#1F3950;} ");
+		builder.append(".colorOrange, a{color: rgb(223, 105, 26);} ");
+		builder.append(".headerLabel{line-height: 48px; float: left; text-align: justify;  padding-right: 10px; font-size: 25px; font-weight: bold; font-style: italic;} ");
+		builder.append(".paddingLeft{padding-left: 10px;} ");
+		builder.append("p, .content div, .footer div {margin-left: 10px; font-size: 20px; color: #404040;} ");
+		builder.append("h3{color: #1F3950; margin-left: 10px;} ");
+		
+		builder.append("</style>");
+		builder.append("</head>");
+		builder.append("<body>");
+		// --Header start
+		builder.append("<div class='headerDiv bgBlue'>");
+		builder.append("<span class='headerLabel paddingLeft colorOrange'>TeamPlaner</span>");
+		builder.append("</div><br/>");
+		//-- Header end
+		
+		//-- Content start
+		builder.append("<div class='content'>");
+		builder.append(content);
+		builder.append("</div>");
+		//-- Content end
+		
+		//-- Footer start
+		builder.append("<div class='footer'>");
+		builder.append("<p>"+MailTexts.SUPPORT_TEXT+"</p>");
+		builder.append("</div>");
+		// -- Footer end
+		builder.append("</body>");
+		builder.append("</html>");
+		return builder.toString();
 	}
 }

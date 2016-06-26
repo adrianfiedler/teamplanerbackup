@@ -68,6 +68,17 @@ public class Helper {
 		return false;
 	}
 	
+	public static TeamRolle getRoleOfUserInTeam(User user, Team team){
+		String userId = user.getId();
+		for(int i=0; i<team.getRollen().size(); i++){
+			TeamRolle rolle = team.getRollen().get(i);
+			if(rolle.getUser().getId().equals(userId)){
+				return rolle;
+			}
+		}
+		return null;
+	}
+	
 	public static boolean checkIfTerminNeedsTerminReminder(Termin termin){
 		boolean reminderSet = false;
 		for(TeamRolle rolle : termin.getTeam().getRollen()){

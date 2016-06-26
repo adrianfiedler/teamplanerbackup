@@ -18,6 +18,7 @@ package org.jboss.as.quickstarts.kitchensink.rest;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -44,12 +45,15 @@ import org.jboss.as.quickstarts.kitchensink.model.TeamSettings;
 import org.jboss.as.quickstarts.kitchensink.model.Termin;
 import org.jboss.as.quickstarts.kitchensink.model.User;
 import org.jboss.as.quickstarts.kitchensink.model.Verein;
+import org.jboss.as.quickstarts.kitchensink.model.Zusage;
 import org.jboss.as.quickstarts.kitchensink.service.EinladungService;
 import org.jboss.as.quickstarts.kitchensink.service.LoginTokenService;
 import org.jboss.as.quickstarts.kitchensink.service.RollenService;
 import org.jboss.as.quickstarts.kitchensink.service.TeamService;
+import org.jboss.as.quickstarts.kitchensink.service.TerminService;
 import org.jboss.as.quickstarts.kitchensink.service.UserService;
 import org.jboss.as.quickstarts.kitchensink.service.VereinService;
+import org.jboss.as.quickstarts.kitchensink.service.ZusageService;
 import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
 import org.jboss.as.quickstarts.kitchensink.util.ResponseTypes;
@@ -82,6 +86,9 @@ public class TeamResourceRESTService {
     
     @Inject 
     EinladungService einladungService;
+    
+    @Inject 
+    ZusageService zusageService;
     
     @Inject
     VereinService vereinService;
@@ -342,11 +349,11 @@ public class TeamResourceRESTService {
     	return builder.build();
     }
     
-    @GET
+    @POST
 	@Path("/removeUser")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response removeUserFromTeam(@QueryParam("userId") String token,
-			@QueryParam("toRemoveId") String toRemoveId, @QueryParam("teamId") String teamId) {
+	public Response removeUserFromTeam(@FormParam("userId") String token,
+			@FormParam("toRemoveId") String toRemoveId, @FormParam("teamId") String teamId) {
 		Response.ResponseBuilder builder = null;
 		if(token == null || token.length() == 0){
     		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
@@ -386,6 +393,26 @@ public class TeamResourceRESTService {
     										rolleToRemove.setUser(null);
     										toRemoveUser.getRollen().remove(rolleToRemove);
     										rollenService.delete(rolleToRemove);
+    										
+    										//zukuenftige Terminzusagen loeschen
+    										Date now = new Date();
+    										for (Iterator<Zusage> iterator = toRemoveUser.getZusagen().iterator(); iterator.hasNext();) {
+    										    Zusage zusage = iterator.next();
+    										    Termin termin = zusage.getTermin();
+    										    if(termin.getDatum().after(now)){
+    										    	iterator.remove();
+    										    	zusage.setUser(null);
+    										    	zusage.setTermin(null);
+    										    	termin.getZusagen().remove(zusage);
+    										    	zusageService.delete(zusage);
+    										    }
+    										}
+    										
+    										//wenn sonst keine Teams dann aus Verein loeschen
+    										if(toRemoveUser.getRollen().size() == 0){
+    											toRemoveUser.getVerein().getUser().remove(toRemoveUser);
+    											toRemoveUser.setVerein(null);
+    										}
     										builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     									} else{
     										builder = Response.ok(Helper.createResponse("ERROR", "COULD NOT FIND ROLLE", null));
