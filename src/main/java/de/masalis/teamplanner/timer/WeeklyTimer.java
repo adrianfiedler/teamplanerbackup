@@ -8,6 +8,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,6 +31,7 @@ import org.jboss.as.quickstarts.kitchensink.service.UserService;
 import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
 import org.jboss.as.quickstarts.kitchensink.util.MailTexts;
+import org.jboss.ejb3.annotation.TransactionTimeout;
 
 import de.masalis.teamplanner.mail.SendMail;
 
@@ -50,6 +52,7 @@ public class WeeklyTimer {
 	@Inject
     private Logger log;
 	
+	@TransactionTimeout(value=45, unit=TimeUnit.MINUTES)
 	@Schedule(dayOfWeek = "Mon", hour = "0", minute = "0", second = "0")
 	public void sendWeeklyTeamNotification() {
 		List<User> users = userService.findAllWeeklyNotifiedUsers();
@@ -87,12 +90,9 @@ public class WeeklyTimer {
 				builder.append("<p>"+MailTexts.UNREGISTER_WEEKLY_TEXT+"</p>");
 				try {
 					sendMail.sendEmail(toList, "Deine wöchentliche Terminübersicht", builder.toString(), Constants.MAIL_SENDER);
-					Thread.sleep(2000);
 					builder.setLength(0);
 					log.log(Level.INFO, "Weekly mail sent");
 				} catch (MessagingException e) {
-					e.printStackTrace();
-				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}

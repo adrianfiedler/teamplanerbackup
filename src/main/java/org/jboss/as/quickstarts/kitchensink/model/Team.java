@@ -44,10 +44,10 @@ public class Team extends AbstractBaseEntity implements Serializable {
     @OneToMany(fetch=FetchType.LAZY, mappedBy="team", cascade={CascadeType.ALL})
     private List<Termin> termine;
     
-    @OneToMany(fetch=FetchType.EAGER, mappedBy="team", cascade={CascadeType.ALL})
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="team", cascade={CascadeType.ALL})
     private List<TeamRolle> rollen;
     
-    @OneToMany(fetch=FetchType.EAGER, mappedBy="team", cascade={CascadeType.ALL}, orphanRemoval=true)
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="team", cascade={CascadeType.ALL}, orphanRemoval=true)
     private List<Einladung> einladungen;
     
     @OneToMany(fetch=FetchType.LAZY, mappedBy="team", cascade={CascadeType.ALL})

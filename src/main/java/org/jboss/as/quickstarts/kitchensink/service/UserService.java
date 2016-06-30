@@ -40,6 +40,7 @@ import org.jboss.as.quickstarts.kitchensink.model.Verein;
 import org.jboss.as.quickstarts.kitchensink.model.VereinModule;
 import org.jboss.as.quickstarts.kitchensink.model.VereinModule_;
 import org.jboss.as.quickstarts.kitchensink.model.Verein_;
+import org.jboss.as.quickstarts.kitchensink.util.Constants;
 
 // The @Stateless annotation eliminates the need for manual transaction demarcation
 @Stateless
@@ -52,7 +53,7 @@ public class UserService {
     private EntityManager em;
 
     public void register(User user) throws EntityExistsException, IllegalArgumentException, TransactionRequiredException{
-        log.info("Registering " + user.getName());
+        log.info("Create user " + user.getVorname() +" " +user.getName());
         em.persist(user);
     }
     
@@ -126,6 +127,19 @@ public class UserService {
         // feature in JPA 2.0
         // criteria.select(User).orderBy(cb.asc(User.get(User_.name)));
         criteria.select(User).orderBy(cb.asc(User.get("name")));
+        return em.createQuery(criteria).getResultList();
+    }
+    
+    public List<User> findTrainerByTeamId(String teamId) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<User> criteria = cb.createQuery(User.class);
+        Root<User> user = criteria.from(User.class);
+        Join<User, TeamRolle> rolle = user.join(User_.rollen);
+        Join<TeamRolle, Team> team = rolle.join(TeamRolle_.team);
+        criteria.select(user).where(cb.and(
+        		cb.equal(team.get(Team_.id), teamId),
+        		cb.equal(rolle.get(TeamRolle_.rolle), Constants.TRAINER_ROLE)
+        		));
         return em.createQuery(criteria).getResultList();
     }
 }

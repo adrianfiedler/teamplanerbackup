@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.Resource;
@@ -137,9 +138,11 @@ public class UserResourceRESTService {
     		User user = userService.findByEmail(email);
         	if(user == null || !user.getPasswort().equals(password)){
         		// kein user oder falsches Passwort
+        		log.log(Level.WARNING, "Login error pwd wrong for mail: "+email);
         		builder = Response.ok(Helper.createResponse("ERROR", "USER ID NOT FOUND OR WRONG PASSWORD", null));
         	} else{
         		if(!user.isAktiviert()){
+        			log.log(Level.INFO, "Login error not activated for mail: "+email);
         			builder = Response.ok(Helper.createResponse("ERROR", "USER NOT ACTIVATED", null));
         		} else{
         			// login erfolgreich
@@ -300,6 +303,7 @@ public class UserResourceRESTService {
     					+ "<p>dein Accout bei TeamPlaner wurde erfolgreich aktiviert. Vielen Dank! Du kannst dich jetzt hier einloggen: </p>"
     					+ "<p><a href='"+loginUrl+"'>"+loginUrl+"</a></p>"
     							+ "<p>Dein Teamplaner-Team</p>", Constants.MAIL_SENDER);
+    			log.log(Level.INFO, "User activated: "+existingUser.getId());
     			builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     		} else{
     			builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
@@ -801,6 +805,7 @@ public class UserResourceRESTService {
 									einladung.getTeam().getEinladungen().remove(einladung);
 								}
 							}
+							log.log(Level.INFO, "Deleting user id: "+userToDelete.getId());
 							userService.delete(userToDelete);
 							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 						} catch (Exception e) {

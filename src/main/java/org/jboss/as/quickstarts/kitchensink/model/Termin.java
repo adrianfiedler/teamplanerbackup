@@ -60,7 +60,7 @@ public class Termin extends AbstractBaseEntity implements Serializable {
     private Serie serie;
 
 
-    @OneToMany(fetch=FetchType.EAGER, mappedBy="termin", cascade={CascadeType.ALL})
+    @OneToMany(fetch=FetchType.LAZY, mappedBy="termin", cascade={CascadeType.ALL})
     private List<Zusage> zusagen;
     
     @Temporal(TemporalType.TIMESTAMP)
