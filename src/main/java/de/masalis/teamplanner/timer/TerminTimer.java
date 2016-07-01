@@ -118,6 +118,7 @@ public class TerminTimer {
 							List<String> toList = new ArrayList<String>();
 							toList.add(user.getEmail());
 							sendMail.sendEmail(toList, "Statusmail Termin "+formatter.format(termin.getDatum()), builder.toString(), Constants.MAIL_SENDER);
+							log.log(Level.INFO, "TerminTimer: Termin Reminder mail sent to userId: "+user.getId());
 						}
 					}
 				}
