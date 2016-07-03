@@ -2,6 +2,7 @@ package org.jboss.as.quickstarts.kitchensink.rest;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -33,6 +34,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.xml.bind.DatatypeConverter;
 
 import org.jboss.as.quickstarts.kitchensink.model.Einladung;
 import org.jboss.as.quickstarts.kitchensink.model.LoginToken;
@@ -136,26 +138,32 @@ public class UserResourceRESTService {
     	if(email != null && email.length() > 0){
     		email = cleanMail(email);
     		User user = userService.findByEmail(email);
-        	if(user == null || !user.getPasswort().equals(password)){
-        		// kein user oder falsches Passwort
-        		log.log(Level.WARNING, "Login error pwd wrong for mail: "+email);
-        		builder = Response.ok(Helper.createResponse("ERROR", "USER ID NOT FOUND OR WRONG PASSWORD", null));
-        	} else{
-        		if(!user.isAktiviert()){
-        			log.log(Level.INFO, "Login error not activated for mail: "+email);
-        			builder = Response.ok(Helper.createResponse("ERROR", "USER NOT ACTIVATED", null));
-        		} else{
-        			// login erfolgreich
-        			if(invitationId != null && invitationId.length() > 0){
-        				builder = handleInvitation(user, email, invitationId);
-        			}
-        			// invitation ok wenn builder == null
-        			if(builder == null){
-    					LoginToken loginToken = login(user);
-    					builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createLoginRest(user, loginToken)));
-        			}
-        		}
-        	}
+        	try {
+				if(user == null || !CipherUtil.checkPasswords(password, user.getPasswort())){
+					// kein user oder falsches Passwort
+					log.log(Level.WARNING, "Login error: "+email +", reason:" + (user == null ? "no user for mail found" : "pw wrong"));
+					builder = Response.ok(Helper.createResponse("ERROR", "USER ID NOT FOUND OR WRONG PASSWORD", null));
+				} else{
+					if(!user.isAktiviert()){
+						log.log(Level.INFO, "Login error not activated for mail: "+email);
+						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT ACTIVATED", null));
+					} else{
+						// login erfolgreich
+						if(invitationId != null && invitationId.length() > 0){
+							builder = handleInvitation(user, email, invitationId);
+						}
+						// invitation ok wenn builder == null
+						if(builder == null){
+							LoginToken loginToken = login(user);
+							builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createLoginRest(user, loginToken)));
+						}
+					}
+				}
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+            	context.setRollbackOnly();
+            	return Response.ok(Helper.createResponse("ERROR", "SERVER ERROR", null)).build();
+			}
     	} else{
     		builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
     	}
@@ -243,7 +251,15 @@ public class UserResourceRESTService {
                 user.setName(name);
                 user.setVorname(vorname);
                 user.setEmail(email);
-                user.setPasswort(password);
+                String hashedPasswordWithSaltAppended;
+				try {
+					hashedPasswordWithSaltAppended = CipherUtil.createHashedPasswordWithSaltAppended(password);
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+                	context.setRollbackOnly();
+                	return Response.ok(Helper.createResponse("ERROR", "SERVER ERROR", null)).build();
+				}
+                user.setPasswort(hashedPasswordWithSaltAppended);
                 user.setAktiviert(false);
                 String aktivierToken = UUID.randomUUID().toString();
                 user.setAktivierToken(aktivierToken);
@@ -408,13 +424,20 @@ public class UserResourceRESTService {
     	} else{
     		User existingUser = loginTokenService.getUserIfLoggedIn(token);
     		if(existingUser != null){
-    			if(existingUser.getPasswort().equals(oldPw)){
-    				existingUser.setPasswort(newPw);
-    				userService.update(existingUser);
-    				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-    			} else{
-    				builder = Response.ok(Helper.createResponse("ERROR", "WRONG PASSWORD", null));
-    			}
+    			try{
+	    			if(CipherUtil.checkPasswords(oldPw, existingUser.getPasswort())){
+		                String newHashedPasswordWithSaltAppended = CipherUtil.createHashedPasswordWithSaltAppended(newPw);
+	    				existingUser.setPasswort(newHashedPasswordWithSaltAppended);
+	    				userService.update(existingUser);
+	    				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+	    			} else{
+	    				builder = Response.ok(Helper.createResponse("ERROR", "WRONG PASSWORD", null));
+	    			}
+    			} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+                	context.setRollbackOnly();
+                	return Response.ok(Helper.createResponse("ERROR", "SERVER ERROR", null)).build();
+				}
     		} else{
     			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
     		}
@@ -484,7 +507,15 @@ public class UserResourceRESTService {
         			if(existingUser.getEmail() != null){
         				if(existingUser.isAktiviert()){
         					String newPw = UUID.randomUUID().toString().substring(0, 12);
-        					existingUser.setPasswort(newPw);
+        	                String hashedPasswordWithSaltAppended;
+        					try {
+        						hashedPasswordWithSaltAppended = CipherUtil.createHashedPasswordWithSaltAppended(newPw);
+        					} catch (NoSuchAlgorithmException e) {
+        						e.printStackTrace();
+        	                	context.setRollbackOnly();
+        	                	return Response.ok(Helper.createResponse("ERROR", "SERVER ERROR", null)).build();
+        					}
+        					existingUser.setPasswort(hashedPasswordWithSaltAppended);
         					userService.update(existingUser);
         					List<String> emailList = new ArrayList<String>();
         					emailList.add(existingUser.getEmail());
@@ -775,45 +806,35 @@ public class UserResourceRESTService {
     @POST
     @Path("/deleteUser")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteUser(@FormParam("email") String email, @FormParam("userId") String token) {
+    public Response deleteUser(@FormParam("userId") String token) {
     	Response.ResponseBuilder builder = null;
     	if(token == null || token.length() == 0){
     		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
     	} else{
-    		User requestUser = loginTokenService.getUserIfLoggedIn(token);
-    		if (requestUser == null) {
+    		User userToDelete = loginTokenService.getUserIfLoggedIn(token);
+    		if (userToDelete == null) {
     			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
     		} else{
-    			if(email == null || email.length() == 0){
-    				builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
-    			} else{
-    				email = cleanMail(email);
-    				User userToDelete = userService.findByEmail(email);
-    				if (userToDelete == null || userToDelete.getAktivierToken() == null) {
-    					builder = Response.ok(Helper.createResponse("ERROR", "USER MAIL NOT FOUND", null));
-    				} else{
-						try {
-							for(TeamRolle rolle : userToDelete.getRollen()){
-								rolle.getTeam().getRollen().remove(rolle);
-							}
-							for(Zusage zusage : userToDelete.getZusagen()){
-								zusage.getTermin().getZusagen().remove(zusage);
-							}
-							List<Einladung> einladungen = einladungService.findByEmail(email);
-							if(einladungen != null){
-								for(Einladung einladung : einladungen){
-									einladung.getTeam().getEinladungen().remove(einladung);
-								}
-							}
-							log.log(Level.INFO, "Deleting user id: "+userToDelete.getId());
-							userService.delete(userToDelete);
-							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-						} catch (Exception e) {
-							context.setRollbackOnly();
-							builder = Response.ok(Helper.createResponse("ERROR", "DELETE SERVICE ERROR", null));
+				try {
+					for(TeamRolle rolle : userToDelete.getRollen()){
+						rolle.getTeam().getRollen().remove(rolle);
+					}
+					for(Zusage zusage : userToDelete.getZusagen()){
+						zusage.getTermin().getZusagen().remove(zusage);
+					}
+					List<Einladung> einladungen = einladungService.findByEmail(userToDelete.getEmail());
+					if(einladungen != null){
+						for(Einladung einladung : einladungen){
+							einladung.getTeam().getEinladungen().remove(einladung);
 						}
-    				}
-    			}
+					}
+					log.log(Level.INFO, "Deleting user id: "+userToDelete.getId());
+					userService.delete(userToDelete);
+					builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+				} catch (Exception e) {
+					context.setRollbackOnly();
+					builder = Response.ok(Helper.createResponse("ERROR", "DELETE SERVICE ERROR", null));
+				}
     		}
     	}
         return builder.build();

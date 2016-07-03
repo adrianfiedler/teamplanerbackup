@@ -142,4 +142,11 @@ public class UserService {
         		));
         return em.createQuery(criteria).getResultList();
     }
+    
+    public List<User> findAllUsers() {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<User> criteria = cb.createQuery(User.class);
+        criteria.from(User.class);
+        return em.createQuery(criteria).getResultList();
+    }
 }
