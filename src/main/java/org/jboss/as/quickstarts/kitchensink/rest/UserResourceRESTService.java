@@ -244,60 +244,78 @@ public class UserResourceRESTService {
     public Response createUser(@FormParam("email") String email, @FormParam("vorname") String vorname, @FormParam("name") String name, 
     		@FormParam("password") String password, @FormParam("invitationId") String invitationId) throws MessagingException, UnsupportedEncodingException {
         Response.ResponseBuilder builder = null;
-        	email = cleanMail(email);
-        	User existingUser = userService.findByEmail(email);
-        	if(existingUser == null){
-        		User user = new User();
-                user.setName(name);
-                user.setVorname(vorname);
-                user.setEmail(email);
-                String hashedPasswordWithSaltAppended;
-				try {
-					hashedPasswordWithSaltAppended = CipherUtil.createHashedPasswordWithSaltAppended(password);
-				} catch (NoSuchAlgorithmException e) {
-					e.printStackTrace();
-                	context.setRollbackOnly();
-                	return Response.ok(Helper.createResponse("ERROR", "SERVER ERROR", null)).build();
-				}
-                user.setPasswort(hashedPasswordWithSaltAppended);
-                user.setAktiviert(false);
-                String aktivierToken = UUID.randomUUID().toString();
-                user.setAktivierToken(aktivierToken);
-                UserSettings userSettings = new UserSettings();
-                user.setUserSettings(userSettings);
-                user.setRollen(new ArrayList<TeamRolle>());
-                user.setEinladungen(new ArrayList<Einladung>());
-                user.setZusagen(new ArrayList<Zusage>());
-                user.setWeeklyStatusMail(true);
-                user.setTerminReminderMail(true);
-                userService.register(user);
-                
-                String encodedToken = URLEncoder.encode(aktivierToken, "UTF-8");
-                List<String> emailList = new ArrayList<String>();
-                emailList.add(email);
-                try{
-                	String activationUrl = Constants.ACTIVATION_URL+"?activationToken="+encodedToken;
-                	sendMailService.sendEmail(emailList, "Willkommen beim TeamPlaner", "<p>Hallo "+vorname+",</p>"
-                			+ "<div>herzlich willkommen beim Teamplaner!<br />"
-                			+ "Vielen Dank für die Registrierung.<br />"
-                			+ "Bitte aktiviere deine Email mit Klick auf folgenden Link: </div>"
-                		+ "<p><a href='" + activationUrl + "'>" + activationUrl + "</a></p>"
-                				+ "<p>Dein Teamplaner-Team</p>", Constants.MAIL_SENDER);
-                } catch(MessagingException messagingException){
-                	// could not send mail : rollback
-                	context.setRollbackOnly();
-                	return Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null)).build();
+        if(email == null || email.length() == 0){
+        	builder = Response.ok(Helper.createResponse("ERROR", "NO EMAIL", null));
+        } else{
+        	if(vorname == null || vorname.length() == 0){
+            	builder = Response.ok(Helper.createResponse("ERROR", "NO VORNAME", null));
+            } else{
+            	if(name == null || name.length() == 0){
+                	builder = Response.ok(Helper.createResponse("ERROR", "NO NAME", null));
+                } else{
+                	if(password == null || password.length() == 0){
+                    	builder = Response.ok(Helper.createResponse("ERROR", "NO PASSWORD", null));
+                    } else{
+			        	email = cleanMail(email);
+			        	User existingUser = userService.findByEmail(email);
+			        	if(existingUser == null){
+			        		name = name.trim();
+			        		vorname = vorname.trim();
+			        		User user = new User();
+			                user.setName(name);
+			                user.setVorname(vorname);
+			                user.setEmail(email);
+			                String hashedPasswordWithSaltAppended;
+							try {
+								hashedPasswordWithSaltAppended = CipherUtil.createHashedPasswordWithSaltAppended(password);
+							} catch (NoSuchAlgorithmException e) {
+								e.printStackTrace();
+			                	context.setRollbackOnly();
+			                	return Response.ok(Helper.createResponse("ERROR", "SERVER ERROR", null)).build();
+							}
+			                user.setPasswort(hashedPasswordWithSaltAppended);
+			                user.setAktiviert(false);
+			                String aktivierToken = UUID.randomUUID().toString();
+			                user.setAktivierToken(aktivierToken);
+			                UserSettings userSettings = new UserSettings();
+			                user.setUserSettings(userSettings);
+			                user.setRollen(new ArrayList<TeamRolle>());
+			                user.setEinladungen(new ArrayList<Einladung>());
+			                user.setZusagen(new ArrayList<Zusage>());
+			                user.setWeeklyStatusMail(true);
+			                user.setTerminReminderMail(true);
+			                userService.register(user);
+			                
+			                String encodedToken = URLEncoder.encode(aktivierToken, "UTF-8");
+			                List<String> emailList = new ArrayList<String>();
+			                emailList.add(email);
+			                try{
+			                	String activationUrl = Constants.ACTIVATION_URL+"?activationToken="+encodedToken;
+			                	sendMailService.sendEmail(emailList, "Willkommen beim TeamPlaner", "<p>Hallo "+vorname+",</p>"
+			                			+ "<div>herzlich willkommen beim Teamplaner!<br />"
+			                			+ "Vielen Dank für die Registrierung.<br />"
+			                			+ "Bitte aktiviere deine Email mit Klick auf folgenden Link: </div>"
+			                		+ "<p><a href='" + activationUrl + "'>" + activationUrl + "</a></p>"
+			                				+ "<p>Dein Teamplaner-Team</p>", Constants.MAIL_SENDER);
+			                } catch(MessagingException messagingException){
+			                	// could not send mail : rollback
+			                	context.setRollbackOnly();
+			                	return Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null)).build();
+			                }
+			                if(invitationId != null && invitationId.length() > 0){
+			        			builder = handleInvitation(user, email, invitationId);
+			        		}
+			                // invitation ok wenn builder == null
+			                if(builder == null){
+			                	builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+			                } 
+			        	} else{
+			        		builder = Response.ok(Helper.createResponse("ERROR", "EMAIL EXISTS", null));
+			        	}
+                    }
                 }
-                if(invitationId != null && invitationId.length() > 0){
-        			builder = handleInvitation(user, email, invitationId);
-        		}
-                // invitation ok wenn builder == null
-                if(builder == null){
-                	builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
-                } 
-        	} else{
-        		builder = Response.ok(Helper.createResponse("ERROR", "EMAIL EXISTS", null));
-        	}
+            }
+        }
         return builder.build();
     }
     
@@ -855,6 +873,8 @@ public class UserResourceRESTService {
     			if(newSurname == null || newSurname.length() == 0 || newName == null || newName.length() == 0){
     				builder = Response.ok(Helper.createResponse("ERROR", "NO NAMES SET", null));
     			} else{
+    				newName = newName.trim();
+    				newSurname = newSurname.trim();
     				existingUser.setName(newName);
     				existingUser.setVorname(newSurname);
     				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));

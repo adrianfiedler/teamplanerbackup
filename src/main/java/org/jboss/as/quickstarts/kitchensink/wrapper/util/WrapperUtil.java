@@ -107,11 +107,11 @@ public class WrapperUtil {
 		}
 		List<String> alleVornamen = new ArrayList<String>();
 		for(Zusage zusage : termin.getZusagen()){
-			alleVornamen.add(zusage.getUser().getVorname());
+			alleVornamen.add(zusage.getUser().getVorname().trim());
 		}
 		for(Zusage zusage : termin.getZusagen()){
 			User user = zusage.getUser();
-			int frequency = Collections.frequency(alleVornamen, user.getVorname());
+			int frequency = Collections.frequency(alleVornamen, user.getVorname().trim());
 			createZusagen(userId, rest, team, zusage, user, frequency);
 			
 			if(!Helper.checkIfUserInTeamAndTrainer(user, team)){
