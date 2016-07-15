@@ -471,6 +471,7 @@ public class UserResourceRESTService {
         Response.ResponseBuilder builder = null;
         if(email != null && email.length() > 0){
         	User existingUser = userService.findByEmail(email);
+        	log.log(Level.WARNING, "Forgot password for email: "+email +", user: " + (existingUser == null ? "no user for mail found" : existingUser.getId()));
         	if(existingUser != null){
         		if(existingUser.getEmail() != null){
         			if(existingUser.isAktiviert()){
@@ -521,6 +522,7 @@ public class UserResourceRESTService {
         	String userId = CipherUtil.decrypt(token);
         	if(userId != null){
         		User existingUser = userService.findById(userId);
+        		log.log(Level.WARNING, "Send new password for token: "+token +", user: " + (existingUser == null ? "no user for token found" : existingUser.getId()));
         		if(existingUser != null){
         			if(existingUser.getEmail() != null){
         				if(existingUser.isAktiviert()){
