@@ -658,6 +658,7 @@ public class UserResourceRESTService {
     	Response.ResponseBuilder builder = null;
     	if(email != null && email.length() > 0){
     		User user = userService.findByEmail(email);
+    		log.log(Level.WARNING, "Resend activation for email: "+email +", user: " + (user == null ? "no user for mail found" : user.getId()));
 			if (user == null || user.getAktivierToken() == null) {
 				builder = Response.ok(Helper.createResponse("ERROR", "USER NOT FOUND", null));
 			} else{
