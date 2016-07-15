@@ -148,6 +148,7 @@ public class UserResourceRESTService {
 						log.log(Level.INFO, "Login error not activated for mail: "+email);
 						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT ACTIVATED", null));
 					} else{
+						log.log(Level.INFO, "Login success for email: "+email);
 						// login erfolgreich
 						if(invitationId != null && invitationId.length() > 0){
 							builder = handleInvitation(user, email, invitationId);
@@ -492,11 +493,13 @@ public class UserResourceRESTService {
         					// could not send mail : rollback
         					log.log(Level.WARNING, "Send email with reset password link, send failed for email: "+existingUser.getEmail());
         					context.setRollbackOnly();
+        					messagingException.printStackTrace();
         					return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
         				} catch (UnsupportedEncodingException e) {
         					// could not encode URL : rollback
         					log.log(Level.WARNING, "Send email with reset password link, encoding failed for email: "+existingUser.getEmail());
         					context.setRollbackOnly();
+        					e.printStackTrace();
         					return Response.ok(Helper.createResponse("ERROR", "ENCODING ERROR", null)).build();
 						}
         			} else{
@@ -533,8 +536,8 @@ public class UserResourceRESTService {
         					try {
         						hashedPasswordWithSaltAppended = CipherUtil.createHashedPasswordWithSaltAppended(newPw);
         					} catch (NoSuchAlgorithmException e) {
+        						context.setRollbackOnly();
         						e.printStackTrace();
-        	                	context.setRollbackOnly();
         	                	return Response.ok(Helper.createResponse("ERROR", "SERVER ERROR", null)).build();
         					}
         					existingUser.setPasswort(hashedPasswordWithSaltAppended);
@@ -549,6 +552,7 @@ public class UserResourceRESTService {
         						// could not send mail : rollback
         						log.log(Level.WARNING, "Send email with new password failed for email: "+existingUser.getEmail());
         						context.setRollbackOnly();
+        						messagingException.printStackTrace();
         						return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
         					}
         				} else{
