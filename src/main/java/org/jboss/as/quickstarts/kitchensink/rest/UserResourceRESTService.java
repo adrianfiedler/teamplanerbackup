@@ -490,10 +490,12 @@ public class UserResourceRESTService {
         					builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
         				} catch(MessagingException messagingException){
         					// could not send mail : rollback
+        					log.log(Level.WARNING, "Send email with reset password link, send failed for email: "+existingUser.getEmail());
         					context.setRollbackOnly();
         					return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
         				} catch (UnsupportedEncodingException e) {
         					// could not encode URL : rollback
+        					log.log(Level.WARNING, "Send email with reset password link, encoding failed for email: "+existingUser.getEmail());
         					context.setRollbackOnly();
         					return Response.ok(Helper.createResponse("ERROR", "ENCODING ERROR", null)).build();
 						}
@@ -545,6 +547,7 @@ public class UserResourceRESTService {
         						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
         					} catch(MessagingException messagingException){
         						// could not send mail : rollback
+        						log.log(Level.WARNING, "Send email with new password failed for email: "+existingUser.getEmail());
         						context.setRollbackOnly();
         						return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
         					}
