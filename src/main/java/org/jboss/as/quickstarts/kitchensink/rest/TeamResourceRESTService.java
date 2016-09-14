@@ -398,13 +398,15 @@ public class TeamResourceRESTService {
     										Date now = new Date();
     										for (Iterator<Zusage> iterator = toRemoveUser.getZusagen().iterator(); iterator.hasNext();) {
     										    Zusage zusage = iterator.next();
-    										    Termin termin = zusage.getTermin();
-    										    if(termin.getDatum().after(now)){
-    										    	iterator.remove();
-    										    	zusage.setUser(null);
-    										    	zusage.setTermin(null);
-    										    	termin.getZusagen().remove(zusage);
-    										    	zusageService.delete(zusage);
+    										    Termin zusageTermin = zusage.getTermin();
+    										    if(zusageTermin.getTeam().getId().equals(teamId)){
+    										    	if(zusageTermin.getDatum().after(now)){
+    										    		iterator.remove();
+    										    		zusage.setUser(null);
+    										    		zusage.setTermin(null);
+    										    		zusageTermin.getZusagen().remove(zusage);
+    										    		zusageService.delete(zusage);
+    										    	}
     										    }
     										}
     										

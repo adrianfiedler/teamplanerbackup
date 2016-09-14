@@ -210,13 +210,22 @@ public class UserResourceRESTService {
         				rolle.setTeam(team);
         				rolle.setUser(user);
         				
+        				Date now = new Date();
+        				Calendar nowCal = Calendar.getInstance();
+        				nowCal.setTime(now);
+        				nowCal.set(Calendar.HOUR_OF_DAY, 0);
+        				nowCal.set(Calendar.MINUTE, 0);
+        				nowCal.set(Calendar.SECOND, 0);
         				for(Termin t : team.getTermine()){
-        					Zusage zusage = new Zusage();
-        					zusage.setKommentar("");
-        					zusage.setStatus(t.getDefaultZusageStatus());
-        					zusage.setTermin(t);
-        					zusage.setUser(user);
-        					zusageService.save(zusage);
+        					// nur zukuenftige Termine hinzufuegen
+        					if(t.getDatum().after(nowCal.getTime())){
+        						Zusage zusage = new Zusage();
+        						zusage.setKommentar("");
+        						zusage.setStatus(t.getDefaultZusageStatus());
+        						zusage.setTermin(t);
+        						zusage.setUser(user);
+        						zusageService.save(zusage);
+        					}
         				}
         				einladung.getInviter().getEinladungen().remove(einladung);
         				einladung.setInviter(null);

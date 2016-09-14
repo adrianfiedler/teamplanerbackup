@@ -51,6 +51,10 @@
 		<!-- maven-compiler-plugin -->
 		<maven.compiler.target>1.7</maven.compiler.target>
 		<maven.compiler.source>1.7</maven.compiler.source>
+		
+        <servlet.version>3.1.0</servlet.version>
+        <jsf.version>2.2.12</jsf.version>
+        <primefaces.version>5.2</primefaces.version>
 	</properties>
 
 
@@ -141,7 +145,14 @@
 			<artifactId>jboss-jsf-api_2.2_spec</artifactId>
 			<scope>provided</scope>
 		</dependency>
-
+        <!-- PrimeFaces -->
+        <dependency>
+            <groupId>org.primefaces</groupId>
+            <artifactId>primefaces</artifactId>
+            <version>6.0</version>
+            <scope>compile</scope>
+        </dependency>
+   		
 		<!-- Now we declare any tools needed -->
 
 		<!-- Annotation processor to generate the JPA 2.0 metamodel classes for 
@@ -224,8 +235,17 @@
 		    <version>9.0.1.Final</version>
 		    <scope>provided</scope>
         </dependency>
+        
 
 	</dependencies>
+	
+	<!-- <repositories>
+	<repository>
+         <id>primefaces-repository</id>
+         <name>Primefaces repository</name>
+         <url>http://repository.primefaces.org</url>
+     </repository>
+	</repositories> -->
 
 	<build>
 		<!-- Maven will append the version to the finalName (which is the name 
