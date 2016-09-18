@@ -301,6 +301,7 @@ public class TeamResourceRESTService {
     							verein = vereinService.save(verein);
     							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     						} catch (Exception e) {
+    							e.printStackTrace();
     							builder = Response.ok(Helper.createResponse("ERROR", "DELETE TEAM FAILED", null));
     						}
     					}

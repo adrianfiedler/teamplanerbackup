@@ -4,8 +4,10 @@ import java.io.Serializable;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.jboss.as.quickstarts.kitchensink.interfaces.DisplayNameInterface;
+
 @XmlRootElement
-public class SpielerZusageREST implements Serializable {
+public class SpielerZusageREST implements Serializable, DisplayNameInterface {
 
 	/**
 	 * 
@@ -21,5 +23,10 @@ public class SpielerZusageREST implements Serializable {
 	public String displayName;
 	
 	public boolean autoSet;
+	
+	@Override
+	public String getDisplayName(){
+		return displayName;
+	}
 	
 }

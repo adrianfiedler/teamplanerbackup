@@ -56,6 +56,7 @@ public class MemberController {
             facesContext.addMessage(null, m);
             initNewMember();
         } catch (Exception e) {
+        	e.printStackTrace();
             String errorMessage = getRootErrorMessage(e);
             FacesMessage m = new FacesMessage(FacesMessage.SEVERITY_ERROR, errorMessage, "Registration unsuccessful");
             facesContext.addMessage(null, m);

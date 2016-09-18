@@ -111,6 +111,7 @@ public class MemberResourceRESTService {
             responseObj.put("email", "Email taken");
             builder = Response.status(Response.Status.CONFLICT).entity(responseObj);
         } catch (Exception e) {
+        	e.printStackTrace();
             // Handle generic exceptions
             Map<String, String> responseObj = new HashMap<>();
             responseObj.put("error", e.getMessage());

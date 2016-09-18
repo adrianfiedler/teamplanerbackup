@@ -3,6 +3,7 @@ package de.masalis.teamplanner.timer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
 import org.jboss.as.quickstarts.kitchensink.util.MailTexts;
 import org.jboss.as.quickstarts.kitchensink.util.ZusagenCount;
+import org.jboss.as.quickstarts.kitchensink.util.comparators.ZusageComparator;
 import org.jboss.ejb3.annotation.TransactionTimeout;
 
 import de.masalis.teamplanner.mail.SendMail;
@@ -231,7 +233,9 @@ public class TerminTimer {
 		resultMap.put("TR_AB", new ArrayList<String>());
 		resultMap.put("TR_VI", new ArrayList<String>());
 		
-		for(Zusage zusage : termin.getZusagen()){
+		List<Zusage> zusagenNachNameSortiert = new ArrayList<Zusage>(termin.getZusagen());
+		Collections.sort(zusagenNachNameSortiert, new ZusageComparator());
+		for(Zusage zusage : zusagenNachNameSortiert){
 			User user = zusage.getUser();
 			if(zusage.getStatus() == Constants.ZUGESAGT){
 				if(Helper.getRoleOfUserInTeam(user, termin.getTeam()).getRolle().equals(Constants.TRAINER_ROLE)){

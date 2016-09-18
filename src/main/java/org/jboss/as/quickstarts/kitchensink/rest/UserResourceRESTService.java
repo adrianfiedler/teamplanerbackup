@@ -412,8 +412,10 @@ public class UserResourceRESTService {
     									} catch(MessagingException messagingException){
     					                	// could not send mail : rollback
     					                	context.setRollbackOnly();
+    					                	messagingException.printStackTrace();
     					                	return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
     					                } catch (Exception e) {
+    					                	e.printStackTrace();
     					                	context.setRollbackOnly();
     										builder = Response.ok(Helper.createResponse("ERROR", "DATABASE SAVE ERROR", null));
     									} 
@@ -692,6 +694,7 @@ public class UserResourceRESTService {
 	                	context.setRollbackOnly();
 	                	return Response.ok(Helper.createResponse("ERROR", "SEND MAIL ERROR", null)).build();
 	                } catch (UnsupportedEncodingException e) {
+	                	e.printStackTrace();
 	                	context.setRollbackOnly();
 						return Response.ok(Helper.createResponse("ERROR", "ENCODING ERROR", null)).build();
 					}
@@ -862,13 +865,17 @@ public class UserResourceRESTService {
 					List<Einladung> einladungen = einladungService.findByEmail(userToDelete.getEmail());
 					if(einladungen != null){
 						for(Einladung einladung : einladungen){
-							einladung.getTeam().getEinladungen().remove(einladung);
+							// bug dass Einladung nicht geloescht wird, sondern nur inviter und team = null
+							if(einladung.getTeam() != null && einladung.getTeam().getEinladungen() != null){
+								einladung.getTeam().getEinladungen().remove(einladung);
+							}
 						}
 					}
 					log.log(Level.INFO, "Deleting user id: "+userToDelete.getId());
 					userService.delete(userToDelete);
 					builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 				} catch (Exception e) {
+					e.printStackTrace();
 					context.setRollbackOnly();
 					builder = Response.ok(Helper.createResponse("ERROR", "DELETE SERVICE ERROR", null));
 				}

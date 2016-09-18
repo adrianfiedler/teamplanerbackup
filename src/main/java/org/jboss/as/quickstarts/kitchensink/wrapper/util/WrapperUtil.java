@@ -21,6 +21,9 @@ import org.jboss.as.quickstarts.kitchensink.model.Verein;
 import org.jboss.as.quickstarts.kitchensink.model.Zusage;
 import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
+import org.jboss.as.quickstarts.kitchensink.util.comparators.TeamMitgliedRestComparator;
+import org.jboss.as.quickstarts.kitchensink.util.comparators.ZusageComparator;
+import org.jboss.as.quickstarts.kitchensink.util.comparators.ZusageRestComparator;
 import org.jboss.as.quickstarts.kitchensink.wrapper.EinladungREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.LoginTokenREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.OrtREST;
@@ -129,6 +132,10 @@ public class WrapperUtil {
 		if(prevTermin != null && prevTermin.getId() != null){
 			rest.previousTerminId = prevTermin.getId();
 		}
+		
+		//sortiere Zusagen nach displayName
+		sortZusagen(rest);
+		
 		return rest;
 	}
 
@@ -224,6 +231,7 @@ public class WrapperUtil {
 					mitglieder.add(mitgliedRest);
 				}
 			}
+			Collections.sort(mitglieder, new TeamMitgliedRestComparator());
 			teamRest.mitglieder = mitglieder;
 			rest.teams.add(teamRest);
 		}
@@ -271,6 +279,8 @@ public class WrapperUtil {
 		if(einladungen != null){
 			rest.einladungen = createRest(einladungen);
 		}
+		// sortiere mitglieder nach vorname, name
+		Collections.sort(rest.mitglieder, new TeamMitgliedRestComparator());
 		return rest;
 	}
 	
@@ -350,5 +360,15 @@ public class WrapperUtil {
 		TeamSettingsREST rest = new TeamSettingsREST();
 		rest.trainerMussZusagen = teamSettings.isTrainerMussZusagen();
 		return rest;
+	}
+	
+	//sortiere Zusagen nach displayName
+	public static void sortZusagen(TerminREST rest) {
+		if(rest.teamZusagen != null && rest.teamZusagen.trainerZusagen != null && rest.teamZusagen.trainerZusagen.size() > 0){
+			Collections.sort(rest.teamZusagen.trainerZusagen, new ZusageRestComparator());
+		}
+		if(rest.teamZusagen != null && rest.teamZusagen.spielerZusagen != null && rest.teamZusagen.spielerZusagen.size() > 0){
+			Collections.sort(rest.teamZusagen.spielerZusagen, new ZusageRestComparator());
+		}
 	}
 }
