@@ -191,7 +191,7 @@ public class TerminResourceRESTService {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response createTermin(TerminRequestREST terminRest) {
 		Response.ResponseBuilder builder = null;
-
+		boolean daylightTimeSwitched = false;
 		int terminCount = 0;
 		// Check user Rechte
 		builder = checkUserCreateTerminPrivileg(terminRest);
@@ -203,10 +203,19 @@ public class TerminResourceRESTService {
 		Ort ort = this.getOrCreateOrt(terminRest);
 
 		Date terminDatum = new Date(Long.parseLong(terminRest.datum) * 1000);
+		
 		Date now = new Date();
 		if(terminDatum.before(now)){
 			return Response.ok(Helper.createResponse("ERROR", "TERMIN IN PAST", "")).build();
 		}
+		
+		//Winter - Sommerzeit Überprüfung
+		Calendar creationDate = Calendar.getInstance();
+		creationDate.setTime(terminDatum);
+		creationDate.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
+		TimeZone mez = TimeZone.getTimeZone("Europe/Berlin");
+		boolean currentDaylightTime = mez.inDaylightTime(creationDate.getTime());
+		
 		Date terminEndDatum = null;
 		Calendar cStart = Calendar.getInstance();
 		cStart.setTime(terminDatum);
@@ -289,6 +298,24 @@ public class TerminResourceRESTService {
 			if (terminRest.serie != null && terminRest.serie.intervall != 0
 					&& terminRest.serie.serieEndDate != null) {
 				cCurrent.add(Calendar.DATE, terminRest.serie.intervall);
+				if(!daylightTimeSwitched && currentDaylightTime != mez.inDaylightTime(cCurrent.getTime())){//Zeitzone hat sich geändert (im Vergleich zum 1. Termin der Serie)
+					if(currentDaylightTime){
+						cCurrent.add(Calendar.HOUR, 1);
+					}
+					else{
+						cCurrent.add(Calendar.HOUR, -1);
+					}
+					daylightTimeSwitched=true;
+				}
+				else if(daylightTimeSwitched && currentDaylightTime == mez.inDaylightTime(cCurrent.getTime())){//Zeitzone hat sich zum zweiten mal geändert z.B. sommer -> winter -> sommer
+					if(currentDaylightTime){
+						cCurrent.add(Calendar.HOUR, -1);
+					}
+					else{
+						cCurrent.add(Calendar.HOUR, 1);
+					}
+					daylightTimeSwitched=false;
+				}
 				currentDate = cCurrent.getTime();
 			} else {
 				currentDate = endDate;
