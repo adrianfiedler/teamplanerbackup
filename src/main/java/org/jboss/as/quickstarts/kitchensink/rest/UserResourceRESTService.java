@@ -56,6 +56,7 @@ import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
 import org.jboss.as.quickstarts.kitchensink.util.MailTexts;
 import org.jboss.as.quickstarts.kitchensink.util.ResponseTypes;
+import org.jboss.as.quickstarts.kitchensink.wrapper.ResendInvitationsREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.UserREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.UserSettingsREST;
 import org.jboss.as.quickstarts.kitchensink.wrapper.util.WrapperUtil;
@@ -441,6 +442,82 @@ public class UserResourceRESTService {
     			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
     		}
     	}
+        return builder.build();
+    }
+    
+    /**
+     * um alle offenen Einladungen eines Teams erneut zu verschicken
+     */
+    @POST
+    @Path("/reinviteMembers")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response reinviteMembers(ResendInvitationsREST resendRest){
+        Response.ResponseBuilder builder = null;
+        if(resendRest == null){
+        	builder = Response.ok(Helper.createResponse("ERROR", "NO JSON SENT", null));
+        } else{
+        	if(resendRest.trainerId == null || resendRest.trainerId.length() == 0){
+        		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
+        	} else{
+        		User trainerUser = loginTokenService.getUserIfLoggedIn(resendRest.trainerId);
+        		if(trainerUser != null){
+        			Team team = teamService.findById(resendRest.teamId);
+        			if(team != null){
+        				if(Helper.checkIfUserInTeamAndTrainer(trainerUser, team) || 
+        						(trainerUser.isAdmin() && team.getVerein().getId().equals(trainerUser.getVerein().getId()))){
+        					List<Einladung> einladungen = null;
+        					if(resendRest.emails == null || resendRest.emails.size() == 0){
+        						einladungen = einladungService.findByTeamId(team.getId());
+        					} else{
+        						einladungen = einladungService.findByTeamUndEmails(team.getId(), resendRest.emails);
+        					}
+        					if(einladungen != null && einladungen.size() > 0){
+        						for(Einladung einladung : einladungen){
+        							User existingEmailUser = userService.findByEmail(einladung.getEmail());
+        							if(existingEmailUser != null && Helper.checkIfUserInTeam(existingEmailUser, team)){
+        								// user schon im Team
+        							} else{
+        								try {
+        									List<String> emailList = new ArrayList<String>();
+        									String encryptedInvitationId = CipherUtil.encrypt(einladung.getId());
+        									emailList.add(einladung.getEmail());
+        									String loginUrl = Constants.LOGIN_URL+"?id="+URLEncoder.encode(encryptedInvitationId, "UTF-8");
+        									sendMailService.sendEmail(emailList, "Du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zu TeamPlaner eingeladen",
+        											"<p>Hallo " + einladung.getVorname() + " " + einladung.getName() + ",</p>"
+        													+ "<p>du wurdest von "+trainerUser.getVorname()+" "+trainerUser.getName()+" zum Team <b>"+team.getName()+"</b> "
+        													+ "in den Verein <b>"+team.getVerein().getName()+"</b> in TeamPlaner eingeladen.</p>"
+        													+ "<p>Um diesem Team beizutreten, logge dich unter folgendem Link ein oder registriere dich hier: </p>"
+        													+ "<p><a href='"+loginUrl+"'>"+loginUrl+"</a></p>"
+        													+ "<p>TeamPlaner ist ein plattformunabhängiges Tool zum Verwalten von Teams und Terminen. Und das Beste: Es ist kostenlos für dich!"
+        													+ "Also nimm die Einladung an und sei mit dabei!</p>", Constants.MAIL_SENDER);
+        								} catch(MessagingException messagingException){
+        									// could not send mail : rollback
+        									context.setRollbackOnly();
+        									messagingException.printStackTrace();
+        									return Response.ok(Helper.createResponse("ERROR", "MAIL SEND ERROR", null)).build();
+        								} catch (Exception e) {
+        									e.printStackTrace();
+        									context.setRollbackOnly();
+        									builder = Response.ok(Helper.createResponse("ERROR", "DATABASE SAVE ERROR", null));
+        								} 
+        							}
+        						}
+        						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+        					} else{
+        						builder = Response.ok(Helper.createResponse("ERROR", "NO OPEN INVITATIONS FOUND", null));
+        					}
+        				} else{
+        					builder = Response.ok(Helper.createResponse("ERROR", "USER NOT TRAINER OR NOT IN TEAM", null));
+        				}
+        			} else{
+        				builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM FOUND", null));
+        			}
+        		} else{
+        			builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
+        		}
+        	}
+        }
         return builder.build();
     }
     

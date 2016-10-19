@@ -38,4 +38,6 @@ public class TerminRequestREST implements Serializable {
 	public String userId;
 	
 	public int defaultZusageStatus;
+	
+	public boolean editSerie;
 }

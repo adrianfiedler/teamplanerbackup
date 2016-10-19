@@ -185,7 +185,7 @@ public class TerminResourceRESTService {
 		return builder.build();
 	}
 
-	// create termin mit terminserie oder update termin
+	// create termin mit terminserie oder update termin (einzel oder ganze serie)
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
@@ -243,7 +243,7 @@ public class TerminResourceRESTService {
 				termin = terminService.findById(terminRest.terminId);
 				if (termin == null) {
 					return Response.ok(Helper.createResponse("ERROR", "TERMIN ID DOES NOT EXIST", "")).build();
-				}
+				} 
 			} else {
 				termin = new Termin();
 			}
@@ -295,27 +295,15 @@ public class TerminResourceRESTService {
 			//abschluss
 			termin = terminService.save(termin);
 			terminCount++;
+			//serie auch bearbeiten?
+			if(termin.getSerie() != null && terminRest.editSerie){
+				saveTerminChangesToSerie(termin);
+			}
 			if (terminRest.serie != null && terminRest.serie.intervall != 0
 					&& terminRest.serie.serieEndDate != null) {
 				cCurrent.add(Calendar.DATE, terminRest.serie.intervall);
-				if(!daylightTimeSwitched && currentDaylightTime != mez.inDaylightTime(cCurrent.getTime())){//Zeitzone hat sich geändert (im Vergleich zum 1. Termin der Serie)
-					if(currentDaylightTime){
-						cCurrent.add(Calendar.HOUR, 1);
-					}
-					else{
-						cCurrent.add(Calendar.HOUR, -1);
-					}
-					daylightTimeSwitched=true;
-				}
-				else if(daylightTimeSwitched && currentDaylightTime == mez.inDaylightTime(cCurrent.getTime())){//Zeitzone hat sich zum zweiten mal geändert z.B. sommer -> winter -> sommer
-					if(currentDaylightTime){
-						cCurrent.add(Calendar.HOUR, -1);
-					}
-					else{
-						cCurrent.add(Calendar.HOUR, 1);
-					}
-					daylightTimeSwitched=false;
-				}
+				daylightTimeSwitched = correctTimeVerschiebung(daylightTimeSwitched, mez, currentDaylightTime,
+						cCurrent);
 				currentDate = cCurrent.getTime();
 			} else {
 				currentDate = endDate;
@@ -326,6 +314,64 @@ public class TerminResourceRESTService {
 		builder = Response.ok(Helper.createResponse("SUCCESS", "", "CREATED TERMINE: " + terminCount));
 		return builder.build();
 	}
+
+	public boolean correctTimeVerschiebung(boolean daylightTimeSwitched, TimeZone mez, boolean currentDaylightTime,
+			Calendar cCurrent) {
+		if(!daylightTimeSwitched && currentDaylightTime != mez.inDaylightTime(cCurrent.getTime())){//Zeitzone hat sich geändert (im Vergleich zum 1. Termin der Serie)
+			if(currentDaylightTime){
+				cCurrent.add(Calendar.HOUR, 1);
+			}
+			else{
+				cCurrent.add(Calendar.HOUR, -1);
+			}
+			daylightTimeSwitched=true;
+		}
+		else if(daylightTimeSwitched && currentDaylightTime == mez.inDaylightTime(cCurrent.getTime())){//Zeitzone hat sich zum zweiten mal geändert z.B. sommer -> winter -> sommer
+			if(currentDaylightTime){
+				cCurrent.add(Calendar.HOUR, -1);
+			}
+			else{
+				cCurrent.add(Calendar.HOUR, 1);
+			}
+			daylightTimeSwitched=false;
+		}
+		return daylightTimeSwitched;
+	}
+	
+	private void saveTerminChangesToSerie(Termin terminOrig){
+		Serie serie = terminOrig.getSerie();
+		List<Termin> serienTermine = terminService.findInFutureOfTerminAndSerie(terminOrig);
+		if(serienTermine != null && serie != null){
+			//Winter - Sommerzeit Überprüfung
+			Calendar creationDate = Calendar.getInstance();
+			creationDate.setTime(terminOrig.getDatum());
+			creationDate.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
+			TimeZone mez = TimeZone.getTimeZone("Europe/Berlin");
+			boolean currentDaylightTime = mez.inDaylightTime(creationDate.getTime());
+			boolean daylightTimeSwitched = false;
+			
+			Calendar cOrig = Calendar.getInstance();
+			cOrig.setTime(terminOrig.getDatum());
+			Calendar cCurrent = Calendar.getInstance();
+			cCurrent.setTime(terminOrig.getDatum());
+			
+			for(Termin serienTermin : serienTermine){
+				cCurrent.add(Calendar.DAY_OF_YEAR, serie.getIntervall());
+				daylightTimeSwitched = correctTimeVerschiebung(daylightTimeSwitched, mez, currentDaylightTime, cCurrent);
+				serienTermin.setAbsageKommentar(terminOrig.getAbsageKommentar());
+				serienTermin.setBeschreibung(terminOrig.getBeschreibung());
+				serienTermin.setDefaultZusageStatus(terminOrig.getDefaultZusageStatus());
+				serienTermin.setMaybeAllowed(terminOrig.isMaybeAllowed());
+				serienTermin.setName(terminOrig.getName());
+				serienTermin.setOrt(terminOrig.getOrt());
+				serienTermin.setStatus(terminOrig.getStatus());
+				serienTermin.setTeam(terminOrig.getTeam());
+				serienTermin.setDatum(cCurrent.getTime());
+				terminService.save(serienTermin);
+			}
+		}
+	}
+	
 	
 	private int getZusageStatus(Calendar calendar, Zusage zusage, UserSettings userSettings, int defaultZusageStatus){
 		int status = defaultZusageStatus;
@@ -375,7 +421,6 @@ public class TerminResourceRESTService {
 	}
 
 	private Ort getOrCreateOrt(TerminRequestREST terminRest) {
-		Verein verein = vereinService.findByTeamId(terminRest.teamId);
 		Ort ort = null;
 		OrtREST ortRest = terminRest.ort;
 		if (terminRest.ort != null && terminRest.ort.id != null && ortService.findById(terminRest.ort.id) != null) {
@@ -401,6 +446,7 @@ public class TerminResourceRESTService {
 		ort.setLatitude(ortRest.latitude);
 		ort.setLongitude(ortRest.longitude);
 		ort.setTeamId(terminRest.teamId);
+		Verein verein = vereinService.findByTeamId(terminRest.teamId);
 		ort.setVereinId(verein.getId());
 		ort.setTermine(new ArrayList<Termin>());
 		ort.setVerein(verein);

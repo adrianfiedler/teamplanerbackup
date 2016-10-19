@@ -31,6 +31,7 @@ import javax.persistence.criteria.Root;
 
 import org.jboss.as.quickstarts.kitchensink.model.Einladung;
 import org.jboss.as.quickstarts.kitchensink.model.Serie;
+import org.jboss.as.quickstarts.kitchensink.model.Serie_;
 import org.jboss.as.quickstarts.kitchensink.model.Team;
 import org.jboss.as.quickstarts.kitchensink.model.Team_;
 import org.jboss.as.quickstarts.kitchensink.model.Termin;
@@ -255,5 +256,19 @@ public class TerminService {
 		} else{
 			return erg.get(0);
 		}
+	}
+	
+	public List<Termin> findInFutureOfTerminAndSerie(Termin terminOrig) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Termin> criteria = cb.createQuery(Termin.class);
+		Root<Termin> terminRoot = criteria.from(Termin.class);
+		Join<Termin, Serie> serie = terminRoot.join(Termin_.serie);
+		criteria.select(terminRoot).where(cb.and(
+				cb.equal(serie.get(Serie_.id), terminOrig.getSerie().getId()),
+				cb.greaterThan(terminRoot.get(Termin_.datum), terminOrig.getDatum())
+		));
+		criteria.orderBy(cb.asc(terminRoot.get(Termin_.datum)));
+		return em.createQuery(criteria).getResultList();
+
 	}
 }

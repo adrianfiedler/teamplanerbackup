@@ -84,6 +84,22 @@ public class EinladungService {
         }
 	}
 	
+	public List<Einladung> findByTeamUndEmails(String teamId, List<String> emails) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Einladung> criteria = cb.createQuery(Einladung.class);
+        Root<Einladung> einladung = criteria.from(Einladung.class);
+        Join<Einladung,Team> team = einladung.join(Einladung_.team);
+        criteria.select(einladung).where(cb.and(
+        		einladung.get(Einladung_.email).in(emails), 
+        		cb.equal(team.get(Team_.id), teamId)));
+        List<Einladung> results = em.createQuery(criteria).getResultList();
+        if(results != null && results.size() > 0){
+        	return results;
+        } else{
+        	return null;
+        }
+	}
+	
 	public List<Einladung> findByEmail(String email) {
 		CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Einladung> criteria = cb.createQuery(Einladung.class);
