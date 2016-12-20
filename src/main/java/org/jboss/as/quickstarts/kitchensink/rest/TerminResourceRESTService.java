@@ -28,6 +28,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.jboss.as.quickstarts.kitchensink.constants.Rolle;
 import org.jboss.as.quickstarts.kitchensink.model.Ort;
 import org.jboss.as.quickstarts.kitchensink.model.Serie;
@@ -250,9 +251,9 @@ public class TerminResourceRESTService {
 			termin.setOrt(ort);
 			ort.getTermine().add(termin);
 			termin.setStatus(1);
-			termin.setBeschreibung(terminRest.beschreibung);
+			termin.setBeschreibung(StringEscapeUtils.escapeHtml4(terminRest.beschreibung));
 			termin.setMaybeAllowed(terminRest.maybeAllowed);
-			termin.setName(terminRest.name);
+			termin.setName(StringEscapeUtils.escapeHtml4(terminRest.name));
 			termin.setDatum(currentDate);
 			termin.setDefaultZusageStatus(terminRest.defaultZusageStatus);
 

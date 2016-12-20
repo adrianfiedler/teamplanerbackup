@@ -18,6 +18,7 @@ package org.jboss.as.quickstarts.kitchensink.test;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.jboss.as.quickstarts.kitchensink.util.CipherUtil;
 import org.junit.Test;
 
@@ -39,6 +40,11 @@ public class CryptoTest {
     	String fiedler = CipherUtil.encrypt("Fiedler");
     	
     	assertEquals(text, decrypt1);
+    }
+    
+    @Test
+    public void testEscape() throws Exception {
+    	String test = StringEscapeUtils.escapeJava("Meine Name ist Döter <img src='/' onError='alert('test')'");
     }
 
 }

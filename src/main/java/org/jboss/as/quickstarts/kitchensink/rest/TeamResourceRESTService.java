@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Resource;
+import javax.ejb.EJBContext;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import javax.mail.MessagingException;
@@ -98,6 +100,9 @@ public class TeamResourceRESTService {
     
     @Inject 
     RollenService rollenService;
+    
+    @Resource
+    private EJBContext context;
 
     //liste des Teams zur Verwaltung
     @GET
@@ -214,6 +219,7 @@ public class TeamResourceRESTService {
 						einladungService.delete(einladung);
 						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 					} catch (Exception e) {
+						context.setRollbackOnly();
 						builder = Response.ok(Helper.createResponse("ERROR", "EINLADUNG DELETE ERROR", null));
 						e.printStackTrace();
 					}
@@ -294,14 +300,20 @@ public class TeamResourceRESTService {
     					if(user.isAdmin() == false){
     						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT ADMIN", null));
     					} else{
-    						Verein verein = user.getVerein();
-    						//verein.getVereinsTeams().remove(team);
+    						for(TeamRolle rolle : team.getRollen()){
+    							rolle.getUser().getRollen().remove(rolle);
+    							rolle.setUser(null);
+    						}
+    						for(Einladung einladung : team.getEinladungen()){
+    							einladung.getInviter().getEinladungen().remove(einladung);
+    							einladung.setInviter(null);
+    						}
     						try {
     							teamService.delete(team);
-    							verein = vereinService.save(verein);
     							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     						} catch (Exception e) {
     							e.printStackTrace();
+    							context.setRollbackOnly();
     							builder = Response.ok(Helper.createResponse("ERROR", "DELETE TEAM FAILED", null));
     						}
     					}

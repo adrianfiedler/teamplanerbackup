@@ -36,6 +36,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.xml.bind.DatatypeConverter;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.jboss.as.quickstarts.kitchensink.model.Einladung;
 import org.jboss.as.quickstarts.kitchensink.model.LoginToken;
 import org.jboss.as.quickstarts.kitchensink.model.Team;
@@ -270,8 +271,8 @@ public class UserResourceRESTService {
 			        	email = cleanMail(email);
 			        	User existingUser = userService.findByEmail(email);
 			        	if(existingUser == null){
-			        		name = name.trim();
-			        		vorname = vorname.trim();
+			        		name = StringEscapeUtils.escapeHtml4(name.trim());
+			        		vorname = StringEscapeUtils.escapeHtml4(vorname.trim());
 			        		User user = new User();
 			                user.setName(name);
 			                user.setVorname(vorname);
@@ -385,6 +386,8 @@ public class UserResourceRESTService {
     										if(einladung == null){
     											einladung = new Einladung();
     											einladung.setEmail(email);
+    											name = StringEscapeUtils.escapeHtml4(name.trim());
+    											vorname = StringEscapeUtils.escapeHtml4(vorname.trim());
     											einladung.setName(name);
     											einladung.setVorname(vorname);
     											einladung.setInviter(trainerUser);
@@ -976,8 +979,8 @@ public class UserResourceRESTService {
     			if(newSurname == null || newSurname.length() == 0 || newName == null || newName.length() == 0){
     				builder = Response.ok(Helper.createResponse("ERROR", "NO NAMES SET", null));
     			} else{
-    				newName = newName.trim();
-    				newSurname = newSurname.trim();
+    				newName = StringEscapeUtils.escapeHtml4(newName.trim());
+    				newSurname = StringEscapeUtils.escapeHtml4(newSurname.trim());
     				existingUser.setName(newName);
     				existingUser.setVorname(newSurname);
     				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
