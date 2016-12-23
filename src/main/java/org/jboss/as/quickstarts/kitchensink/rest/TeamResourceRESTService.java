@@ -324,11 +324,11 @@ public class TeamResourceRESTService {
     	return builder.build();
     }
     
-    @GET
+    @POST
     @Path("/rename")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response renameTeam(@QueryParam("teamId") String teamId, @QueryParam("userId") String token, 
-    		@QueryParam("newName") String newName) {
+    public Response renameTeam(@FormParam("teamId") String teamId, @FormParam("userId") String token, 
+    		@FormParam("newName") String newName) {
     	Response.ResponseBuilder builder = null;
     	if(token == null || token.length() == 0){
     		builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NO_TOKEN_SET, null));
