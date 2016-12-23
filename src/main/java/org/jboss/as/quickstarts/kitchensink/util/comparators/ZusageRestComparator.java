@@ -20,7 +20,7 @@ public class ZusageRestComparator implements Comparator<DisplayNameInterface> {
     	} else if(o1 == null && o2 == null){
     		return 0;
     	} else{
-    		return o1.getDisplayName().compareTo(o2.getDisplayName());
+    		return o1.getDisplayName().toLowerCase().compareTo(o2.getDisplayName().toLowerCase());
     	}
     }
 }
