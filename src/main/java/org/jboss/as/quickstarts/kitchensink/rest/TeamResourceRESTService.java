@@ -39,6 +39,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.jboss.as.quickstarts.kitchensink.model.Einladung;
 import org.jboss.as.quickstarts.kitchensink.model.Team;
 import org.jboss.as.quickstarts.kitchensink.model.TeamMailSettings;
@@ -552,6 +553,11 @@ public class TeamResourceRESTService {
     						} else{
     							teamSettings.setTrainerMussZusagen(teamSettingsRequest.trainerMussZusagen);
     							teamService.saveTeamSettings(teamSettings);
+    							
+    							if(teamSettingsRequest.newTeamName != null && teamSettingsRequest.newTeamName.length() > 0){
+    								team.setName(StringEscapeUtils.escapeHtml4(teamSettingsRequest.newTeamName.trim()));
+    								teamService.save(team);
+    							}
     							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     						}
     					}

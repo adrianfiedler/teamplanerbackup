@@ -13,4 +13,6 @@ public class TeamSettingsRequestREST implements Serializable {
 	public String teamId;
 
 	public String userId;
+	
+	public String newTeamName;
 }
