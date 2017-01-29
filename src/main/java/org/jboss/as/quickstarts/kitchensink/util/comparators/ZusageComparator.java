@@ -40,7 +40,7 @@ public class ZusageComparator implements Comparator<Zusage> {
             	} else if(vorname1 == null && vorname2 == null){
             		return 0;
             	} else{
-            		int compVorname = vorname1.compareTo(vorname2);
+            		int compVorname = vorname1.toLowerCase().compareTo(vorname2.toLowerCase());
             		if(compVorname != 0){
             			return compVorname;
             		} else{
@@ -54,7 +54,7 @@ public class ZusageComparator implements Comparator<Zusage> {
                     	} else if(nachname1 == null && nachname2 == null){
                     		return 0;
                     	} else{
-                    		return nachname1.compareTo(nachname2);
+                    		return nachname1.toLowerCase().compareTo(nachname2.toLowerCase());
                     	}
             		}
             	}

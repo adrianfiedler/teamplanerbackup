@@ -21,6 +21,7 @@ import org.jboss.as.quickstarts.kitchensink.model.Verein;
 import org.jboss.as.quickstarts.kitchensink.model.Zusage;
 import org.jboss.as.quickstarts.kitchensink.util.Constants;
 import org.jboss.as.quickstarts.kitchensink.util.Helper;
+import org.jboss.as.quickstarts.kitchensink.util.comparators.EinladungRestComparator;
 import org.jboss.as.quickstarts.kitchensink.util.comparators.TeamMitgliedRestComparator;
 import org.jboss.as.quickstarts.kitchensink.util.comparators.ZusageComparator;
 import org.jboss.as.quickstarts.kitchensink.util.comparators.ZusageRestComparator;
@@ -110,12 +111,12 @@ public class WrapperUtil {
 		}
 		List<String> alleVornamen = new ArrayList<String>();
 		for(Zusage zusage : termin.getZusagen()){
-			alleVornamen.add(zusage.getUser().getVorname().trim());
+			alleVornamen.add(zusage.getUser().getVorname().trim().toLowerCase());
 		}
 		for(Zusage zusage : termin.getZusagen()){
 			User user = zusage.getUser();
-			int frequency = Collections.frequency(alleVornamen, user.getVorname().trim());
-			createZusagen(userId, rest, team, zusage, user, frequency);
+			int frequency = Collections.frequency(alleVornamen, user.getVorname().trim().toLowerCase());
+			createZusage(userId, rest, team, zusage, user, frequency);
 			
 			if(!Helper.checkIfUserInTeamAndTrainer(user, team)){
 				switch(zusage.getStatus()){
@@ -139,17 +140,19 @@ public class WrapperUtil {
 		return rest;
 	}
 
-	public static void createZusagen(String userId, TerminREST rest, Team team, Zusage zusage, User user,
+	public static void createZusage(String loggedInUserId, TerminREST rest, Team team, Zusage zusage, User zusageUser,
 			int frequency) {
 		TeamSettings teamSettings = team.getTeamSettings();
-		for(TeamRolle rolle : user.getRollen()){
+		for(TeamRolle rolle : zusageUser.getRollen()){
+			// finde Rolle im Team
 			if(rolle.getTeam().getId().equals(team.getId())){
-				if(userId.equals(user.getId())){
+				// userZusage oder Team-Zusage?
+				if(loggedInUserId.equals(zusageUser.getId())){
 					UserZusageREST userZusage = new UserZusageREST();
 					userZusage.status = zusage.getStatus();
 					userZusage.kommentar = zusage.getKommentar();
 					userZusage.rolle = rolle.getRolle();
-					userZusage.displayName = user.getVorname();
+					userZusage.displayName = zusageUser.getVorname();
 					userZusage.autoSet = zusage.isAutoSet();
 					rest.userZusage = userZusage;
 					if(rolle.getRolle().equals(Constants.TRAINER_ROLE) && !teamSettings.isTrainerMussZusagen()){
@@ -164,9 +167,9 @@ public class WrapperUtil {
 							trainerZusage.kommentar = zusage.getKommentar();
 							trainerZusage.autoSet = zusage.isAutoSet();
 							if(frequency > 1){
-								trainerZusage.displayName = user.getVorname() + " " +user.getName();
+								trainerZusage.displayName = zusageUser.getVorname() + " " +zusageUser.getName();
 							} else{
-								trainerZusage.displayName = user.getVorname();
+								trainerZusage.displayName = zusageUser.getVorname();
 							}
 							rest.teamZusagen.trainerZusagen.add(trainerZusage);
 						}
@@ -177,9 +180,9 @@ public class WrapperUtil {
 						spielerZusage.kommentar = zusage.getKommentar();
 						spielerZusage.autoSet = zusage.isAutoSet();
 						if(frequency > 1){
-							spielerZusage.displayName = user.getVorname() + " " +user.getName();
+							spielerZusage.displayName = zusageUser.getVorname() + " " +zusageUser.getName();
 						} else{
-							spielerZusage.displayName = user.getVorname();
+							spielerZusage.displayName = zusageUser.getVorname();
 						}
 						rest.teamZusagen.spielerZusagen.add(spielerZusage);
 					}
@@ -278,6 +281,7 @@ public class WrapperUtil {
 		}
 		if(einladungen != null){
 			rest.einladungen = createRest(einladungen);
+			Collections.sort(rest.einladungen, new EinladungRestComparator());
 		}
 		// sortiere mitglieder nach vorname, name
 		Collections.sort(rest.mitglieder, new TeamMitgliedRestComparator());
