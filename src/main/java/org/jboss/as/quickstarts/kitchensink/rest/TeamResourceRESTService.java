@@ -165,7 +165,7 @@ public class TeamResourceRESTService {
     	    		{
     	    		    listString += s + "\t";
     	    		}
-    	    		log.log(Level.INFO, "userIds: "+listString);
+    	    		log.log(Level.INFO, "send mail to team with userIds: "+listString);
     	    		Team team = teamService.findById(teamId);
     	    		if(team == null){
     	    			builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
@@ -217,6 +217,7 @@ public class TeamResourceRESTService {
     					einladung.getTeam().getEinladungen().remove(einladung);
     					einladung.setInviter(null);
     					einladung.setTeam(null);
+    					log.log(Level.INFO, "delete invitaion for email "+email+ " and teamId "+teamId);
 						einladungService.delete(einladung);
 						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 					} catch (Exception e) {
@@ -270,6 +271,7 @@ public class TeamResourceRESTService {
     						
 							team = teamService.save(team);
 							verein = vereinService.save(verein);
+							log.log(Level.INFO, "Team "+teamName+" created with id: "+team.getId());
 							builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createRest(team)));
     					}
     				}
@@ -290,19 +292,21 @@ public class TeamResourceRESTService {
     		if(teamId == null || teamId.length() == 0){
     			builder = Response.ok(Helper.createResponse("ERROR", "NO TEAM ID SET", null));
     		} else{
-    			User user = loginTokenService.getUserIfLoggedIn(token);
-    			if(user == null){
+    			boolean loggedIn = loginTokenService.checkIfLoggedIn(token);
+    			if(!loggedIn){
     				builder = Response.ok(Helper.createResponse("ERROR", ResponseTypes.NOT_LOGGED_IN, null));
     			} else{
     				Team team = teamService.findById(teamId);
     				if(team == null){
     					builder = Response.ok(Helper.createResponse("ERROR", "TEAM NOT FOUND", null));
     				} else{
-    					if(user.isAdmin() == false){
+    					if(!loginTokenService.isAdminByToken(token)){
     						builder = Response.ok(Helper.createResponse("ERROR", "USER NOT ADMIN", null));
     					} else{
     						for(TeamRolle rolle : team.getRollen()){
-    							rolle.getUser().getRollen().remove(rolle);
+    							if(rolle.getUser() != null && rolle.getUser().getRollen() != null){
+    								rolle.getUser().getRollen().remove(rolle);
+    							}
     							rolle.setUser(null);
     						}
     						for(Einladung einladung : team.getEinladungen()){
@@ -310,6 +314,7 @@ public class TeamResourceRESTService {
     							einladung.setInviter(null);
     						}
     						try {
+    							log.log(Level.INFO, "Deleting team with id: "+ teamId);
     							teamService.delete(team);
     							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     						} catch (Exception e) {
@@ -351,6 +356,7 @@ public class TeamResourceRESTService {
     						if(Helper.checkIfUserInTeamAndTrainer(user, team) || user.isAdmin()){
     							team.setName(newName);
     							teamService.save(team);
+    							log.log(Level.INFO, "Team with id "+teamId+" renamed to "+newName);
     							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     						} else{
     							builder = Response.ok(Helper.createResponse("ERROR", "USER NOT TRAINER IN TEAM AND NOT ADMIN", null));
@@ -429,6 +435,7 @@ public class TeamResourceRESTService {
     											toRemoveUser.getVerein().getUser().remove(toRemoveUser);
     											toRemoveUser.setVerein(null);
     										}
+    										log.log(Level.INFO, "user with id "+toRemoveId+" removed from team with id "+teamId);
     										builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     									} else{
     										builder = Response.ok(Helper.createResponse("ERROR", "COULD NOT FIND ROLLE", null));
@@ -482,6 +489,7 @@ public class TeamResourceRESTService {
     									teamMailSettings.setShowIntroduction(showAnleitung);
     									teamMailSettings.setMailText(mailText);
     									teamService.saveTeamMailSettings(teamMailSettings);
+    									log.log(Level.INFO, "set weekly mail settings for team id: "+teamId);
     									builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     								}
     							}
@@ -558,6 +566,7 @@ public class TeamResourceRESTService {
     								team.setName(StringEscapeUtils.escapeHtml4(teamSettingsRequest.newTeamName.trim()));
     								teamService.save(team);
     							}
+    							log.log(Level.INFO, "set team settings for team with id: "+teamSettingsRequest.teamId);
     							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     						}
     					}

@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.Resource;
@@ -295,6 +296,8 @@ public class TerminResourceRESTService {
 			
 			//abschluss
 			termin = terminService.save(termin);
+			log.log(Level.INFO, "Termin for team id: "+team.getId()+" created on date " + termin.getDatum().toString());
+					
 			terminCount++;
 			//serie auch bearbeiten?
 			if(termin.getSerie() != null && terminRest.editSerie){
@@ -530,6 +533,7 @@ public class TerminResourceRESTService {
         							}
         							zusage.setAutoSet(false);
         							terminService.updateZusage(zusage);
+        							log.log(Level.INFO, "set Zusage status");
         							set = true;
         							break;
         						}
@@ -586,6 +590,7 @@ public class TerminResourceRESTService {
     							
     							termin.setStatus(Integer.parseInt(status));
     							terminService.save(termin);
+    							log.log(Level.INFO, "set termin status");
 	    						if(status.equals(Constants.TERMIN_STATUS_ABGESAGT)){
 	    							// nur email schicken bei Kommentar
 	    							if(kommentar != null && kommentar.length() > 0){
@@ -701,6 +706,7 @@ public class TerminResourceRESTService {
 							}
 						}
 					}
+					log.log(Level.INFO, "set user status in Zeitraum");
 					builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 				} else{
 					builder = Response.ok(Helper.createResponse("ERROR", "NO TERMINE FOUND", null));

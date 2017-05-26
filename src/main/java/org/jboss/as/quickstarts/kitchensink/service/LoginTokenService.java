@@ -131,4 +131,28 @@ public class LoginTokenService {
     	} 
     	return null;
     }
+    
+    public boolean checkIfLoggedIn(String tokenString){
+    	LoginToken loginToken = findTokenByTokenstring(tokenString);
+    	if(loginToken != null){
+    		User user = loginToken.getUser();
+    		if(user != null){
+    			Date now = new Date();
+    			Date timeoutDate = loginToken.getTimeOut();
+    			if(timeoutDate.after(now)){
+    				return true;
+    			} 
+    		}
+    	} 
+    	return false;
+    }
+    
+    public boolean isAdminByToken(String token) {
+    	User user = findUserByTokenstring(token);
+    	if(user == null){
+    		return false;
+    	} else{
+    		return user.isAdmin();
+    	}
+    }
 }

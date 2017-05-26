@@ -319,6 +319,7 @@ public class UserResourceRESTService {
 			        		}
 			                // invitation ok wenn builder == null
 			                if(builder == null){
+			                	log.log(Level.INFO, "user email "+email+" registered");
 			                	builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 			                } 
 			        	} else{
@@ -413,6 +414,7 @@ public class UserResourceRESTService {
     																+ "<p>TeamPlaner ist ein plattformunabhängiges Tool zum Verwalten von Teams und Terminen. Und das Beste: Es ist kostenlos für dich!"
     																+ "Also nimm die Einladung an und sei mit dabei!</p>", Constants.MAIL_SENDER);
     										builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+    										log.log(Level.INFO, "email "+email+" invited to team id: "+team.getId());
     									} catch(MessagingException messagingException){
     					                	// could not send mail : rollback
     					                	context.setRollbackOnly();
@@ -467,6 +469,7 @@ public class UserResourceRESTService {
         		if(trainerUser != null){
         			Team team = teamService.findById(resendRest.teamId);
         			if(team != null){
+        				log.log(Level.INFO, "resend invitations for team id: "+resendRest.teamId);
         				if(Helper.checkIfUserInTeamAndTrainer(trainerUser, team) || 
         						(trainerUser.isAdmin() && team.getVerein().getId().equals(trainerUser.getVerein().getId()))){
         					List<Einladung> einladungen = null;
@@ -539,8 +542,10 @@ public class UserResourceRESTService {
 		                String newHashedPasswordWithSaltAppended = CipherUtil.createHashedPasswordWithSaltAppended(newPw);
 	    				existingUser.setPasswort(newHashedPasswordWithSaltAppended);
 	    				userService.update(existingUser);
+	    				log.log(Level.INFO, "change password for user id: "+existingUser.getId());
 	    				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
 	    			} else{
+	    				log.log(Level.INFO, "change password failed (wrong password) for user id: "+existingUser.getId());
 	    				builder = Response.ok(Helper.createResponse("ERROR", "WRONG PASSWORD", null));
 	    			}
     			} catch (NoSuchAlgorithmException e) {
@@ -708,6 +713,7 @@ public class UserResourceRESTService {
     						}
     					}
     				}
+    				log.log(Level.INFO, "set user settings for user id: "+userSettings.userId);
     				user = userService.update(user);
     				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     			}
@@ -769,6 +775,7 @@ public class UserResourceRESTService {
 	                		+ "<p><a href='"+ activationUrl +"'>"+ activationUrl +"</a></p>"
 	                				+ "<p>Dein Teamplaner-Team</p>", Constants.MAIL_SENDER);
 						builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+						log.log(Level.INFO, "resend activation mail for email "+email);
 					} catch(MessagingException messagingException){
 	                	// could not send mail : rollback
 	                	context.setRollbackOnly();
@@ -823,6 +830,7 @@ public class UserResourceRESTService {
 				if(loginToken == null){
 					builder = Response.ok(Helper.createResponse("ERROR", "NO TOKEN FOR USER FOUND", null));					
 				} else{
+					log.log(Level.INFO, "user with id: "+loginToken.getUser().getId()+" logout");
 					loginToken.getUser().setLoginToken(null);
 					loginToken.setUser(null);
 					loginTokenService.delete(loginToken);
@@ -858,6 +866,7 @@ public class UserResourceRESTService {
         				user.setWeeklyStatusMail(weeklyStatusMail);
         				user.setTerminReminderMail(terminReminderMail);
         				userService.update(user);
+        				log.log(Level.INFO, "set user mail settings for user id: "+user.getId());
         				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
         			}
     			}
@@ -907,6 +916,7 @@ public class UserResourceRESTService {
 		                			+ "</ol><br />"
 		                			+ "Dein Teamplaner Team<br /><br /></div>", Constants.MAIL_SENDER);
 							builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
+							log.log(Level.INFO, "user with id: "+requestUser.getId() + "asking for invite: "+email);
 						} catch(MessagingException messagingException){
 		                	// could not send mail : rollback
 		                	context.setRollbackOnly();
@@ -983,6 +993,7 @@ public class UserResourceRESTService {
     				newSurname = StringEscapeUtils.escapeHtml4(newSurname.trim());
     				existingUser.setName(newName);
     				existingUser.setVorname(newSurname);
+    				log.log(Level.INFO, "change username for user id: "+existingUser.getId());
     				builder = Response.ok(Helper.createResponse("SUCCESS", "", null));
     			}
     		}
