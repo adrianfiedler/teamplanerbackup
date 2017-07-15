@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import javax.ws.rs.core.Response;
+
 import org.jboss.as.quickstarts.kitchensink.model.Team;
 import org.jboss.as.quickstarts.kitchensink.model.TeamRolle;
 import org.jboss.as.quickstarts.kitchensink.model.Termin;
@@ -191,5 +193,28 @@ public class Helper {
 			}
 		}
 		return trainer;
+	}
+	
+	public static boolean checkResponseInvNotFound(Response.ResponseBuilder responseBuilder){
+		return checkStatusAndDescriptionOfResponse(responseBuilder, "ERROR", "INVITATION NOT FOUND");
+	}
+	
+	public static boolean checkStatusAndDescriptionOfResponse(Response.ResponseBuilder responseBuilder, String status, String description){
+		boolean res = false;
+		if(responseBuilder != null ){
+			Response response = responseBuilder.build();
+			if(response != null){
+				if(response.getEntity() instanceof ResponseREST){
+					ResponseREST responseRest = (ResponseREST)response.getEntity();
+					if(responseRest.status != null && responseRest.description != null){
+						if(responseRest.status.equals(status) && responseRest.description.equals(description)){
+							res = true;
+						}
+					}
+				}
+			}
+			
+		}
+		return res;
 	}
 }

@@ -155,8 +155,12 @@ public class UserResourceRESTService {
 						if(invitationId != null && invitationId.length() > 0){
 							builder = handleInvitation(user, email, invitationId);
 						}
-						// invitation ok wenn builder == null
-						if(builder == null){
+						// invitation ok wenn builder == null or inv not found
+						boolean invNotFound = Helper.checkResponseInvNotFound(builder);
+						if(builder == null || invNotFound) {
+							if(invNotFound){
+								log.log(Level.INFO, "Login with inv-id but no inv found");
+							}
 							LoginToken loginToken = login(user);
 							builder = Response.ok(Helper.createResponse("SUCCESS", "", WrapperUtil.createLoginRest(user, loginToken)));
 						}
