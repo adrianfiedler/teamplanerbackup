@@ -111,16 +111,18 @@ public class TerminTimer {
 			formatter.setTimeZone(TimeZone.getTimeZone("Europe/Berlin"));
 			try {
 				Termin termin = terminService.findById(terminId);
-				Team team = termin.getTeam();
-				List<User> teamTrainer = userService.findTrainerByTeamId(team.getId());
-				for(User user : teamTrainer){
-					if(user.isTerminReminderMail()){
-						if(termin != null && user != null && team != null){
-							StringBuilder builder = buildTerminMail(formatter, termin, team, user);
-							List<String> toList = new ArrayList<String>();
-							toList.add(user.getEmail());
-							sendMail.sendEmail(toList, "Statusmail Termin "+formatter.format(termin.getDatum()), builder.toString(), Constants.MAIL_SENDER);
-							log.log(Level.INFO, "TerminTimer: Termin Reminder mail sent to userId: "+user.getId());
+				if(termin != null && termin.getStatus() != Constants.ABGESAGT){
+					Team team = termin.getTeam();
+					List<User> teamTrainer = userService.findTrainerByTeamId(team.getId());
+					for(User user : teamTrainer){
+						if(user.isTerminReminderMail()){
+							if(user != null && team != null){
+								StringBuilder builder = buildTerminMail(formatter, termin, team, user);
+								List<String> toList = new ArrayList<String>();
+								toList.add(user.getEmail());
+								sendMail.sendEmail(toList, "Statusmail Termin "+formatter.format(termin.getDatum()), builder.toString(), Constants.MAIL_SENDER);
+								log.log(Level.INFO, "TerminTimer: Termin Reminder mail sent to userId: "+user.getId());
+							}
 						}
 					}
 				}
